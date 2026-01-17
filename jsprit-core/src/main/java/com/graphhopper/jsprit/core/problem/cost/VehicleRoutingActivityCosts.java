@@ -37,12 +37,11 @@ public interface VehicleRoutingActivityCosts {
         public static double TOURSTART = -1.0;
 
         public static double UNDEFINED = -3.0;
+
     }
 
     public static interface Parameter {
-
         public double getPenaltyForMissedTimeWindow();
-
     }
 
     /**
@@ -51,7 +50,7 @@ public interface VehicleRoutingActivityCosts {
      * <p>Here waiting-times, service-times and missed time-windows can be considered.
      *
      * @param tourAct
-     * @param arrivalTime is actually the arrival time at this tourActivity, which must not nessecarrily be the operation start time. If the theoretical earliest
+     * @param arrivalTime is actually the arrival time at this tourActivity, which must not necessarily be the operation start time. If the theoretical earliest
      *                    operation start time at this activity is later than actualStartTime, the driver must wait at this activity.
      * @param driver
      * @param vehicle     if earliestStartTime > latestStartTime activity operations cannot be conducted within the given time-window.
@@ -59,6 +58,38 @@ public interface VehicleRoutingActivityCosts {
      */
     public double getActivityCost(TourActivity tourAct, double arrivalTime, Driver driver, Vehicle vehicle);
 
+    /**
+     * Returns the activity duration for the given activity.
+     * <p>
+     * This is the original method without previous activity context.
+     * For backward compatibility, this method should delegate to getActivityDuration with null prevAct.
+     *
+     * @param tourAct     the current activity
+     * @param arrivalTime the arrival time at this activity
+     * @param driver      the driver
+     * @param vehicle     the vehicle
+     * @return the duration of the activity
+     */
     public double getActivityDuration(TourActivity tourAct, double arrivalTime, Driver driver, Vehicle vehicle);
+
+    /**
+     * Returns the activity duration for the given activity, considering the previous activity.
+     * <p>
+     * This method allows for dynamic duration calculation based on the previous activity,
+     * such as applying preparation time only on first visit to a location.
+     * <p>
+     * Default implementation delegates to the original getActivityDuration method.
+     *
+     * @param prevAct     the previous activity (can be null for first activity after start)
+     * @param tourAct     the current activity
+     * @param arrivalTime the arrival time at this activity
+     * @param driver      the driver
+     * @param vehicle     the vehicle
+     * @return the duration of the activity
+     */
+    default double getActivityDuration(TourActivity prevAct, TourActivity tourAct, double arrivalTime, Driver driver, Vehicle vehicle) {
+        // Default implementation for backward compatibility
+        return getActivityDuration(tourAct, arrivalTime, driver, vehicle);
+    }
 
 }
