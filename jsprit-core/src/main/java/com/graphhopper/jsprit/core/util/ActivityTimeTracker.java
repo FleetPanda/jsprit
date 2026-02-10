@@ -94,7 +94,6 @@ public class ActivityTimeTracker implements ActivityVisitor {
             operationStartTime = actArrTime;
         } else operationStartTime = actArrTime;
 
-        // MODIFIED: Pass prevAct to getActivityDuration for dynamic duration calculation
         double operationEndTime = operationStartTime + activityCosts.getActivityDuration(prevAct, activity, actArrTime, route.getDriver(), route.getVehicle());
 
         actEndTime = operationEndTime;

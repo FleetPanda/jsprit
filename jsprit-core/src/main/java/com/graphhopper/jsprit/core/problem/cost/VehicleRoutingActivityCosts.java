@@ -73,22 +73,20 @@ public interface VehicleRoutingActivityCosts {
     public double getActivityDuration(TourActivity tourAct, double arrivalTime, Driver driver, Vehicle vehicle);
 
     /**
-     * Returns the activity duration for the given activity, considering the previous activity.
+     * Calculates and returns the activity duration considering the previous activity.
      * <p>
-     * This method allows for dynamic duration calculation based on the previous activity,
-     * such as applying preparation time only on first visit to a location.
-     * <p>
-     * Default implementation delegates to the original getActivityDuration method.
+     * This method allows for context-dependent duration calculation, such as setup time
+     * that only applies when the location changes from the previous activity.
      *
-     * @param prevAct     the previous activity (can be null for first activity after start)
-     * @param tourAct     the current activity
+     * @param prevAct     the previous activity in the route (null if this is the first activity after start)
+     * @param tourAct     the activity for which to calculate duration
      * @param arrivalTime the arrival time at this activity
      * @param driver      the driver
      * @param vehicle     the vehicle
-     * @return the duration of the activity
+     * @return the duration of this activity in time units
      */
     default double getActivityDuration(TourActivity prevAct, TourActivity tourAct, double arrivalTime, Driver driver, Vehicle vehicle) {
-        // Default implementation for backward compatibility
+        // Default implementation ignores prevAct for backward compatibility
         return getActivityDuration(tourAct, arrivalTime, driver, vehicle);
     }
 
