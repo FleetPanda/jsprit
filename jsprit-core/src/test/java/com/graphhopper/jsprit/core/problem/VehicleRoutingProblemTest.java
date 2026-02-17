@@ -548,9 +548,10 @@ class VehicleRoutingProblemTest {
         VehicleRoutingProblem.Builder vrpBuilder = VehicleRoutingProblem.Builder.newInstance();
         vrpBuilder.addVehicle(veh1);
         vrpBuilder.addVehicle(veh2);
-        vrpBuilder.build();
-        assertEquals(1, veh1.getVehicleTypeIdentifier().getIndex());
-        assertEquals(1, veh2.getVehicleTypeIdentifier().getIndex());
+        VehicleRoutingProblem vrp = vrpBuilder.build();
+        // Use VRP-based index lookup (VehicleTypeKey objects are not mutated)
+        assertEquals(1, vrp.getVehicleTypeKeyIndex(veh1.getVehicleTypeIdentifier()));
+        assertEquals(1, vrp.getVehicleTypeKeyIndex(veh2.getVehicleTypeIdentifier()));
     }
 
     @Test
@@ -561,8 +562,9 @@ class VehicleRoutingProblemTest {
         VehicleRoutingProblem.Builder vrpBuilder = VehicleRoutingProblem.Builder.newInstance();
         vrpBuilder.addVehicle(veh1);
         vrpBuilder.addVehicle(veh2);
-        vrpBuilder.build();
-        assertEquals(1, veh1.getVehicleTypeIdentifier().getIndex());
-        assertEquals(2, veh2.getVehicleTypeIdentifier().getIndex());
+        VehicleRoutingProblem vrp = vrpBuilder.build();
+        // Use VRP-based index lookup (VehicleTypeKey objects are not mutated)
+        assertEquals(1, vrp.getVehicleTypeKeyIndex(veh1.getVehicleTypeIdentifier()));
+        assertEquals(2, vrp.getVehicleTypeKeyIndex(veh2.getVehicleTypeIdentifier()));
     }
 }
