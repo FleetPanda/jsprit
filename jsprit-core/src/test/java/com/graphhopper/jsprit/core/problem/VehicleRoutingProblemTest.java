@@ -484,8 +484,9 @@ class VehicleRoutingProblemTest {
         vrpBuilder.addJob(service);
         vrpBuilder.addJob(shipment);
         VehicleRoutingProblem vrp = vrpBuilder.build();
-        assertEquals(1, service.getIndex());
-        assertEquals(2, shipment.getIndex());
+        // Use VRP-based index lookup (job objects are not mutated)
+        assertEquals(1, vrp.getJobIndex(service));
+        assertEquals(2, vrp.getJobIndex(shipment));
         assertEquals(3, vrp.getAllLocations().size());
     }
 
@@ -533,9 +534,10 @@ class VehicleRoutingProblemTest {
         VehicleRoutingProblem.Builder vrpBuilder = VehicleRoutingProblem.Builder.newInstance();
         vrpBuilder.addVehicle(veh1);
         vrpBuilder.addVehicle(veh2);
-        vrpBuilder.build();
-        assertEquals(1, veh1.getIndex());
-        assertEquals(2, veh2.getIndex());
+        VehicleRoutingProblem vrp = vrpBuilder.build();
+        // Use VRP-based index lookup (vehicle objects are not mutated)
+        assertEquals(1, vrp.getVehicleIndex(veh1));
+        assertEquals(2, vrp.getVehicleIndex(veh2));
     }
 
     @Test
