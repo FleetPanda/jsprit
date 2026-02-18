@@ -94,7 +94,8 @@ public class ActivityTimeTracker implements ActivityVisitor {
             operationStartTime = actArrTime;
         } else operationStartTime = actArrTime;
 
-        double operationEndTime = operationStartTime + activityCosts.getActivityDuration(activity,actArrTime,route.getDriver(),route.getVehicle());
+        // MODIFIED: Pass prevAct to getActivityDuration for dynamic duration calculation
+        double operationEndTime = operationStartTime + activityCosts.getActivityDuration(prevAct, activity, actArrTime, route.getDriver(), route.getVehicle());
 
         actEndTime = operationEndTime;
 
@@ -113,6 +114,5 @@ public class ActivityTimeTracker implements ActivityVisitor {
 
         beginFirst = false;
     }
-
 
 }

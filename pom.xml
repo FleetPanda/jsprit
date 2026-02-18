@@ -22,13 +22,13 @@
 
     <groupId>com.fleetpanda</groupId>
     <artifactId>jsprit-fleetpanda</artifactId>
-    <version>1.9.0-fleetpanda</version>
+    <version>1.9.0-fleetpanda-prep-time</version>
 
     <packaging>pom</packaging>
 
     <name>jsprit from fleetpanda</name>
     <description>A toolkit to solve vehicle routing problems.</description>
-    <url>https://github.com/markd2lp/jsprit</url>
+    <url>https://github.com/fleetpanda/jsprit</url>
     <inceptionYear>2013</inceptionYear>
 
     <licenses>
@@ -47,9 +47,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git@github.com:markd2lp/jsprit.git</connection>
-        <developerConnection>scm:git:https://github.com/markd2lp/jsprit.git</developerConnection>
-        <url>http://github.com/markd2lp/jsprit/tree/master</url>
+        <connection>scm:git:git@github.com:fleetpanda/jsprit.git</connection>
+        <developerConnection>scm:git:https://github.com/FleetPanda/jsprit.git</developerConnection>
+        <url>http://github.com/FleetPanda/jsprit/tree/master</url>
         <tag>HEAD</tag>
     </scm>
 
@@ -220,7 +220,7 @@
         <repository>
             <id>github</id>
             <name>GitHub GraphHopper Apache Maven Packages</name>
-            <url>https://maven.pkg.github.com/markd2lp/jsprit</url>
+            <url>https://maven.pkg.github.com/FleetPanda/jsprit</url>
         </repository>
     </distributionManagement>
 
