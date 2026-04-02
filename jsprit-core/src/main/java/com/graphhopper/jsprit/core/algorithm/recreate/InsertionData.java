@@ -38,6 +38,20 @@ public class InsertionData {
             super(Double.MAX_VALUE, NO_INDEX, NO_INDEX, null, null);
         }
 
+        @Override
+        public boolean isFound() {
+            return false;
+        }
+    }
+
+    /**
+     * Returns true if this represents a valid insertion, false if no insertion was found.
+     * Use this instead of {@code instanceof NoInsertionFound} checks.
+     *
+     * @return true if insertion is valid, false otherwise
+     */
+    public boolean isFound() {
+        return true;
     }
 
     private static InsertionData noInsertion = new NoInsertionFound();
@@ -69,6 +83,8 @@ public class InsertionData {
     private double departureTime;
 
     private double additionalTime;
+
+    private InsertionCostBreakdown costBreakdown;
 
     private List<Event> events = new ArrayList<Event>();
 
@@ -170,6 +186,24 @@ public class InsertionData {
      */
     public void setVehicleDepartureTime(double departureTime) {
         this.departureTime = departureTime;
+    }
+
+    /**
+     * Get the cost breakdown showing contribution from each component.
+     *
+     * @return the cost breakdown, or null if not captured
+     */
+    public InsertionCostBreakdown getCostBreakdown() {
+        return costBreakdown;
+    }
+
+    /**
+     * Set the cost breakdown.
+     *
+     * @param costBreakdown the breakdown to set
+     */
+    public void setCostBreakdown(InsertionCostBreakdown costBreakdown) {
+        this.costBreakdown = costBreakdown;
     }
 
 

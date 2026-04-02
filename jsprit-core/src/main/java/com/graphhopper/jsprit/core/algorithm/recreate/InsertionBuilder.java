@@ -65,12 +65,6 @@ public class InsertionBuilder {
 
     private int nuOfThreads;
 
-    private double timeSlice;
-
-    private int nNeighbors;
-
-    private boolean timeScheduling = false;
-
     private boolean allowVehicleSwitch = true;
 
     private boolean addDefaultCostCalc = true;
@@ -131,6 +125,13 @@ public class InsertionBuilder {
         return this;
     }
 
+    /**
+     * @deprecated This method no longer has any effect. Fixed costs are now handled via
+     * {@link IncreasingAbsoluteFixedCosts} and {@link DecreasingRelativeFixedCosts} added
+     * as soft route constraints to the ConstraintManager.
+     * See {@link com.graphhopper.jsprit.core.algorithm.box.Jsprit.Builder} for an example.
+     */
+    @Deprecated
     public InsertionBuilder considerFixedCosts(double weightOfFixedCosts) {
         this.weightOfFixedCosts = weightOfFixedCosts;
         this.considerFixedCosts = true;
@@ -165,9 +166,6 @@ public class InsertionBuilder {
         calcBuilder.setActivityInsertionCostsCalculator(actInsertionCostsCalculator);
         if (considerFixedCosts) {
             calcBuilder.considerFixedCosts(weightOfFixedCosts);
-        }
-        if (timeScheduling) {
-            calcBuilder.experimentalTimeScheduler(timeSlice, nNeighbors);
         }
         calcBuilder.setAllowVehicleSwitch(allowVehicleSwitch);
         JobInsertionCostsCalculator costCalculator = calcBuilder.build();

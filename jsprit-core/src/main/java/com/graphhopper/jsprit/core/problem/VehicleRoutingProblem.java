@@ -26,7 +26,6 @@ import com.graphhopper.jsprit.core.problem.solution.route.activity.*;
 import com.graphhopper.jsprit.core.problem.solution.spec.ActivitySpec;
 import com.graphhopper.jsprit.core.problem.solution.spec.ActivityType;
 import com.graphhopper.jsprit.core.problem.solution.spec.RouteSpec;
-import com.graphhopper.jsprit.core.problem.solution.spec.SolutionSpec;
 import com.graphhopper.jsprit.core.problem.vehicle.Vehicle;
 import com.graphhopper.jsprit.core.problem.vehicle.VehicleType;
 import com.graphhopper.jsprit.core.problem.vehicle.VehicleTypeKey;
@@ -92,8 +91,6 @@ public class VehicleRoutingProblem {
 
         private final Collection<VehicleRoute> initialRoutes = new ArrayList<>();
 
-        private SolutionSpec initialSolutionSpec;
-
         private final List<RouteSpec> initialRouteSpecs = new ArrayList<>();
 
         private final Set<Vehicle> uniqueVehicles = new LinkedHashSet<>();
@@ -127,8 +124,8 @@ public class VehicleRoutingProblem {
         private int jobIndexCounterFinal = 0;
 
         // Index maps built during construction - vehicles and jobs are NOT mutated
-        private final Map<String, Integer> vehicleIdToIndexBuilder = new HashMap<>();
-        private final Map<String, Integer> jobIdToIndexBuilder = new HashMap<>();
+        private final IdentityHashMap<Vehicle, Integer> vehicleToIndexBuilder = new IdentityHashMap<>();
+        private final IdentityHashMap<Job, Integer> jobToIndexBuilder = new IdentityHashMap<>();
 
         private final Map<VehicleTypeKey, Integer> typeKeyIndices = new HashMap<>();
 
@@ -329,17 +326,22 @@ public class VehicleRoutingProblem {
         }
 
         /**
-         * Sets the initial solution specification.
+         * Sets the initial route specifications, replacing any previously added specs.
          * <p>
-         * The spec will be materialized into actual routes during {@link #build()}.
-         * This is the preferred way to define initial solutions as it avoids the
+         * The specs will be materialized into actual routes during {@link #build()}.
+         * This is the preferred way to define initial (locked) routes as it avoids the
          * chicken-and-egg problem of needing a VRP to create routes.
+         * <p>
+         * Note: Jobs in these routes will be locked and cannot be removed by the algorithm.
+         * If you want a starting solution that can be fully optimized, use
+         * {@code algorithm.addInitialSolution()} instead.
          *
-         * @param spec the solution specification
+         * @param specs the route specifications
          * @return the builder
          */
-        public Builder setInitialSolutionSpec(SolutionSpec spec) {
-            this.initialSolutionSpec = spec;
+        public Builder setInitialRouteSpecs(List<RouteSpec> specs) {
+            this.initialRouteSpecs.clear();
+            this.initialRouteSpecs.addAll(specs);
             return this;
         }
 
@@ -396,7 +398,7 @@ public class VehicleRoutingProblem {
             else addedVehicleIds.add(vehicle.getId());
             if (!uniqueVehicles.contains(vehicle)) {
                 // Store index in map instead of mutating the vehicle object
-                vehicleIdToIndexBuilder.put(vehicle.getId(), vehicleIndexCounter);
+                vehicleToIndexBuilder.put(vehicle, vehicleIndexCounter);
                 incVehicleIndexCounter();
             }
             // Store type key index in map instead of mutating the VehicleTypeKey object
@@ -472,10 +474,10 @@ public class VehicleRoutingProblem {
             // Store indices in map instead of mutating the job objects
             int jobIndexCounter = 1;
             for (Job job : jobs.values()) {
-                jobIdToIndexBuilder.put(job.getId(), jobIndexCounter++);
+                jobToIndexBuilder.put(job, jobIndexCounter++);
             }
             for (Job job : jobsInInitialRoutes.values()) {
-                jobIdToIndexBuilder.put(job.getId(), jobIndexCounter++);
+                jobToIndexBuilder.put(job, jobIndexCounter++);
             }
             this.jobIndexCounterFinal = jobIndexCounter - 1;
 
@@ -490,13 +492,7 @@ public class VehicleRoutingProblem {
         }
 
         private void materializeSpecs() {
-            // Combine all specs to materialize
-            List<RouteSpec> allRouteSpecs = new ArrayList<>(initialRouteSpecs);
-            if (initialSolutionSpec != null) {
-                allRouteSpecs.addAll(initialSolutionSpec.routes());
-            }
-
-            if (allRouteSpecs.isEmpty()) {
+            if (initialRouteSpecs.isEmpty()) {
                 return;
             }
 
@@ -512,7 +508,7 @@ public class VehicleRoutingProblem {
             allJobs.putAll(jobsInInitialRoutes);
 
             // Materialize each route spec
-            for (RouteSpec routeSpec : allRouteSpecs) {
+            for (RouteSpec routeSpec : initialRouteSpecs) {
                 VehicleRoute route = materializeRouteSpec(routeSpec, vehicleMap, allJobs);
                 if (route != null) {
                     // Add to initial routes using existing method to handle indexing
@@ -667,8 +663,8 @@ public class VehicleRoutingProblem {
     private final static Logger logger = LoggerFactory.getLogger(VehicleRoutingProblem.class);
 
     // Index maps - indices are now stored in VRP, not on vehicle/job objects
-    private final Map<String, Integer> vehicleIdToIndex;
-    private final Map<String, Integer> jobIdToIndex;
+    private final IdentityHashMap<Vehicle, Integer> vehicleToIndex;
+    private final IdentityHashMap<Job, Integer> jobToIndex;
     private final Map<VehicleTypeKey, Integer> typeKeyToIndex;
 
     // Array-based fast access by index
@@ -735,20 +731,20 @@ public class VehicleRoutingProblem {
         this.allJobs.putAll(builder.jobsInInitialRoutes);
 
         // Use index maps from builder (vehicles and jobs are NOT mutated)
-        this.vehicleIdToIndex = new HashMap<>(builder.vehicleIdToIndexBuilder);
+        this.vehicleToIndex = new IdentityHashMap<>(builder.vehicleToIndexBuilder);
         this.vehiclesByIndex = new Vehicle[builder.vehicleIndexCounter];
         for (Vehicle vehicle : vehicles) {
-            Integer index = vehicleIdToIndex.get(vehicle.getId());
+            Integer index = vehicleToIndex.get(vehicle);
             if (index != null && index > 0 && index < vehiclesByIndex.length) {
                 vehiclesByIndex[index] = vehicle;
             }
         }
 
         // Use job index map from builder
-        this.jobIdToIndex = new HashMap<>(builder.jobIdToIndexBuilder);
+        this.jobToIndex = new IdentityHashMap<>(builder.jobToIndexBuilder);
         this.jobsByIndex = new Job[builder.jobIndexCounterFinal + 1];
         for (Job job : allJobs.values()) {
-            Integer index = jobIdToIndex.get(job.getId());
+            Integer index = jobToIndex.get(job);
             if (index != null && index > 0 && index < jobsByIndex.length) {
                 jobsByIndex[index] = job;
             }
@@ -896,7 +892,7 @@ public class VehicleRoutingProblem {
      */
     @SuppressWarnings("deprecation")
     public int getVehicleIndex(Vehicle vehicle) {
-        Integer index = vehicleIdToIndex.get(vehicle.getId());
+        Integer index = vehicleToIndex.get(vehicle);
         if (index != null) {
             return index;
         }
@@ -916,7 +912,7 @@ public class VehicleRoutingProblem {
      */
     @SuppressWarnings("deprecation")
     public int getJobIndex(Job job) {
-        Integer index = jobIdToIndex.get(job.getId());
+        Integer index = jobToIndex.get(job);
         if (index != null) {
             return index;
         }
@@ -1000,7 +996,7 @@ public class VehicleRoutingProblem {
      * @return number of vehicles
      */
     public int getNuVehicles() {
-        return vehicleIdToIndex.size();
+        return vehicleToIndex.size();
     }
 
     /**
@@ -1009,7 +1005,7 @@ public class VehicleRoutingProblem {
      * @return number of jobs
      */
     public int getNuJobs() {
-        return jobIdToIndex.size();
+        return jobToIndex.size();
     }
 
 }

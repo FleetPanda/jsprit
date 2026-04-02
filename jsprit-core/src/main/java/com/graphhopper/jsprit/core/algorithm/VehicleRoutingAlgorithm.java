@@ -18,10 +18,8 @@
 package com.graphhopper.jsprit.core.algorithm;
 
 import com.graphhopper.jsprit.core.algorithm.SearchStrategy.DiscoveredSolution;
-import com.graphhopper.jsprit.core.algorithm.listener.SearchStrategyListener;
-import com.graphhopper.jsprit.core.algorithm.listener.SearchStrategyModuleListener;
-import com.graphhopper.jsprit.core.algorithm.listener.VehicleRoutingAlgorithmListener;
-import com.graphhopper.jsprit.core.algorithm.listener.VehicleRoutingAlgorithmListeners;
+import com.graphhopper.jsprit.core.algorithm.listener.*;
+import com.graphhopper.jsprit.core.algorithm.listener.events.*;
 import com.graphhopper.jsprit.core.algorithm.termination.PrematureAlgorithmTermination;
 import com.graphhopper.jsprit.core.problem.VehicleRoutingProblem;
 import com.graphhopper.jsprit.core.problem.job.Job;
@@ -29,14 +27,13 @@ import com.graphhopper.jsprit.core.problem.solution.SolutionCostCalculator;
 import com.graphhopper.jsprit.core.problem.solution.VehicleRoutingProblemSolution;
 import com.graphhopper.jsprit.core.problem.solution.route.VehicleRoute;
 import com.graphhopper.jsprit.core.problem.solution.route.activity.TourActivity;
+import com.graphhopper.jsprit.core.problem.solution.spec.SolutionSpec;
+import com.graphhopper.jsprit.core.problem.solution.spec.SolutionSpecMaterializer;
 import com.graphhopper.jsprit.core.util.Solutions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 
 /**
@@ -99,6 +96,8 @@ public class VehicleRoutingAlgorithm {
 
     private final VehicleRoutingAlgorithmListeners algoListeners = new VehicleRoutingAlgorithmListeners();
 
+    private final Collection<AlgorithmEventListener> eventListeners = new ArrayList<>();
+
     private final Collection<VehicleRoutingProblemSolution> initialSolutions;
 
     private int maxIterations = 100;
@@ -145,6 +144,25 @@ public class VehicleRoutingAlgorithm {
         solution = VehicleRoutingProblemSolution.copyOf(solution);
         verifyAndAdaptSolution(solution);
         initialSolutions.add(solution);
+    }
+
+    /**
+     * Adds a solution spec as an initial solution.
+     * <p>
+     * The spec will be materialized into a solution using the VRP's vehicles and jobs.
+     * This is the preferred way to provide an initial solution as it avoids issues
+     * with activity indexing and object references.
+     * <p>
+     * Unlike locked routes set via {@code VRP.Builder.setInitialRouteSpecs()}, this
+     * initial solution is fully optimizable - jobs can be moved between routes freely.
+     *
+     * @param spec the solution specification
+     * @throws IllegalArgumentException if the spec references missing vehicles or jobs
+     */
+    public void addInitialSolution(SolutionSpec spec) {
+        SolutionSpecMaterializer materializer = new SolutionSpecMaterializer(problem);
+        VehicleRoutingProblemSolution solution = materializer.materialize(spec);
+        addInitialSolution(solution);
     }
 
     private void verifyAndAdaptSolution(VehicleRoutingProblemSolution solution) {
@@ -218,20 +236,64 @@ public class VehicleRoutingAlgorithm {
         if (logger.isTraceEnabled()) log(solutions);
         logger.info("iterations start");
         for (int i = 0; i < maxIterations; i++) {
-            iterationStarts(i + 1, problem, solutions);
+            int iteration = i + 1;
+            double previousBestCost = bestEver != null ? bestEver.getCost() : Double.MAX_VALUE;
+            iterationStarts(iteration, problem, solutions);
+            if (hasEventListeners()) {
+                emit(new IterationStarted(iteration, System.currentTimeMillis(), previousBestCost));
+            }
             logger.debug("start iteration: {}", i);
             counter.incCounter();
             SearchStrategy strategy = searchStrategyManager.getRandomStrategy();
+            // Emit strategy selected event before the strategy runs
+            if (hasEventListeners()) {
+                emit(new StrategySelected(iteration, System.currentTimeMillis(), strategy.getId()));
+            }
             DiscoveredSolution discoveredSolution = strategy.run(problem, solutions);
+
+            // Emit strategy executed event after the strategy runs with the dynamic strategy ID
+            if (hasEventListeners() && discoveredSolution != null) {
+                emit(new StrategyExecuted(iteration, System.currentTimeMillis(), discoveredSolution.getStrategyId()));
+            }
+
             if (logger.isTraceEnabled()) log(discoveredSolution);
+            double oldBestCost = bestEver != null ? bestEver.getCost() : Double.MAX_VALUE;
+            VehicleRoutingProblemSolution oldBestSolution = bestEver; // Capture before update
             memorizeIfBestEver(discoveredSolution);
+            boolean isNewBest = bestEver != null && bestEver.getCost() < oldBestCost;
+            double newSolutionCost = discoveredSolution != null ? discoveredSolution.getSolution().getCost() : Double.MAX_VALUE;
+            boolean accepted = discoveredSolution != null && discoveredSolution.isAccepted();
+
+            // Emit acceptance decision event
+            if (hasEventListeners() && discoveredSolution != null) {
+                double threshold = strategy.getSolutionAcceptor().getCurrentThreshold();
+                Map<String, Double> oldBreakdown = null;
+                Map<String, Double> newBreakdown = null;
+                if (objectiveFunction != null) {
+                    if (oldBestSolution != null) {
+                        oldBreakdown = objectiveFunction.getCostBreakdown(oldBestSolution);
+                    }
+                    newBreakdown = objectiveFunction.getCostBreakdown(discoveredSolution.getSolution());
+                }
+                emit(new AcceptanceDecision(iteration, System.currentTimeMillis(), oldBestCost, newSolutionCost,
+                        accepted, strategy.getId(), isNewBest, threshold, oldBreakdown, newBreakdown));
+            }
+
             selectedStrategy(discoveredSolution, problem, solutions);
             if (terminationManager.isPrematureBreak(discoveredSolution)) {
-                logger.info("premature algorithm termination at iteration {}", (i + 1));
-                noIterationsThisAlgoIsRunning = (i + 1);
+                logger.info("premature algorithm termination at iteration {}", iteration);
+                noIterationsThisAlgoIsRunning = iteration;
+                if (hasEventListeners()) {
+                    double currentBestCost = bestEver != null ? bestEver.getCost() : Double.MAX_VALUE;
+                    emit(new IterationCompleted(iteration, System.currentTimeMillis(), newSolutionCost, currentBestCost, accepted, strategy.getId()));
+                }
                 break;
             }
-            iterationEnds(i + 1, problem, solutions);
+            if (hasEventListeners()) {
+                double currentBestCost = bestEver != null ? bestEver.getCost() : Double.MAX_VALUE;
+                emit(new IterationCompleted(iteration, System.currentTimeMillis(), newSolutionCost, currentBestCost, accepted, strategy.getId()));
+            }
+            iterationEnds(iteration, problem, solutions);
         }
         logger.info("iterations end at {} iterations", noIterationsThisAlgoIsRunning);
         addBestEver(solutions);
@@ -306,6 +368,55 @@ public class VehicleRoutingAlgorithm {
         if (l instanceof SearchStrategyModuleListener) {
             searchStrategyManager.addSearchStrategyModuleListener((SearchStrategyModuleListener) l);
         }
+    }
+
+    /**
+     * Adds an event listener for receiving algorithm events.
+     *
+     * <p>Event listeners provide a unified way to observe all aspects of the
+     * algorithm's execution, including iteration lifecycle, ruin/recreate phases,
+     * and acceptance decisions.</p>
+     *
+     * @param listener the event listener to add
+     */
+    public void addEventListener(AlgorithmEventListener listener) {
+        eventListeners.add(listener);
+    }
+
+    /**
+     * Removes an event listener.
+     *
+     * @param listener the event listener to remove
+     */
+    public void removeEventListener(AlgorithmEventListener listener) {
+        eventListeners.remove(listener);
+    }
+
+    /**
+     * Emits an event to all registered event listeners.
+     *
+     * <p>This method is intended for internal use by the algorithm and its
+     * components. It has minimal overhead when no listeners are registered.</p>
+     *
+     * @param event the event to emit
+     */
+    public void emit(AlgorithmEvent event) {
+        if (eventListeners.isEmpty()) return;
+        for (AlgorithmEventListener listener : eventListeners) {
+            listener.onEvent(event);
+        }
+    }
+
+    /**
+     * Returns whether any event listeners are registered.
+     *
+     * <p>This can be used to avoid creating event objects when no listeners
+     * are registered, minimizing performance overhead.</p>
+     *
+     * @return true if at least one event listener is registered
+     */
+    public boolean hasEventListeners() {
+        return !eventListeners.isEmpty();
     }
 
     private void iterationEnds(int i, VehicleRoutingProblem problem, Collection<VehicleRoutingProblemSolution> solutions) {
