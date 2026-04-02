@@ -142,6 +142,10 @@ public class Shipment extends AbstractJob {
             return this;
         }
 
+        public Builder setPickupLocation(Location location) {
+            return setPickupLocation(PickupLocation.newInstance(location));
+        }
+
 
         /**
          * Sets pickupServiceTime.
@@ -376,6 +380,61 @@ public class Shipment extends AbstractJob {
     private final double maxTimeInVehicle;
 
     private List<Activity> activities = new ArrayList<>();
+
+    // Transient field to store the selected pickup location during insertion
+    private transient Location selectedPickupLocation = null;
+
+    /**
+     * Sets the selected pickup location (used during insertion calculation).
+     * This is a transient field and is not persisted.
+     */
+    public void setSelectedPickupLocation(Location location) {
+        this.selectedPickupLocation = location;
+    }
+
+    /**
+     * Gets the selected pickup location (if set during insertion).
+     * Returns the first pickup location if none was explicitly selected.
+     */
+    public Location getSelectedPickupLocation() {
+        if (selectedPickupLocation != null) {
+            return selectedPickupLocation;
+        }
+        // Fallback: return first pickup location
+        Collection<PickupLocation> locations = getPickupLocations();
+        if (!locations.isEmpty()) {
+            return locations.iterator().next().getLocation();
+        }
+        return null;
+    }
+
+    public TimeWindow getSelectedPickupTimeWindow() {
+        Location selectedLocation = getSelectedPickupLocation();
+        if (selectedLocation == null) {
+            return null;
+        }
+        for (PickupLocation pl : getPickupLocations()) {
+            if (pl.getLocation().equals(selectedLocation)) {
+                return pl.getPickupTimeWindow();
+            }
+        }
+        return null;
+    }
+
+    public PickupLocation getSelectedPickupLocationObject() {
+        Location selectedLocation = getSelectedPickupLocation();
+        if (selectedLocation == null) {
+            return null;
+        }
+        for (PickupLocation pl : getPickupLocations()) {
+            if (pl.getLocation().equals(selectedLocation)) {
+                return pl;
+            }
+        }
+        return null;
+    }
+    
+    
 
     Shipment(Builder builder) {
         setUserData(builder.userData);

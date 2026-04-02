@@ -23,6 +23,7 @@ import com.graphhopper.jsprit.core.problem.job.Job;
 import com.graphhopper.jsprit.core.problem.job.Service;
 import com.graphhopper.jsprit.core.problem.job.Shipment;
 import com.graphhopper.jsprit.core.problem.solution.route.VehicleRoute;
+import com.graphhopper.jsprit.core.problem.solution.route.activity.PickupLocation;
 import com.graphhopper.jsprit.core.problem.solution.route.activity.TourActivity;
 import com.graphhopper.jsprit.core.util.Coordinate;
 
@@ -273,7 +274,7 @@ class AffectedJobTracker {
         if (job instanceof Service) {
             return ((Service) job).getLocation();
         } else if (job instanceof Shipment) {
-            return ((Shipment) job).getPickupLocation();
+            return ((Shipment) job).getSelectedPickupLocation();
         }
         return null;
     }

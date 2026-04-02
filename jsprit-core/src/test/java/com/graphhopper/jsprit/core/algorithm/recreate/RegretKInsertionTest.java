@@ -26,6 +26,7 @@ import com.graphhopper.jsprit.core.problem.constraint.ConstraintManager;
 import com.graphhopper.jsprit.core.problem.job.Service;
 import com.graphhopper.jsprit.core.problem.job.Shipment;
 import com.graphhopper.jsprit.core.problem.solution.VehicleRoutingProblemSolution;
+import com.graphhopper.jsprit.core.problem.solution.route.activity.PickupLocation;
 import com.graphhopper.jsprit.core.problem.vehicle.VehicleImpl;
 import com.graphhopper.jsprit.core.problem.vehicle.VehicleType;
 import com.graphhopper.jsprit.core.problem.vehicle.VehicleTypeImpl;
@@ -210,17 +211,21 @@ class RegretKInsertionTest {
     @DisplayName("Regret-k with shipments should work correctly")
     void regretKWithShipments() {
         Shipment s1 = Shipment.Builder.newInstance("ship1")
-                .setPickupLocation(Location.Builder.newInstance().setCoordinate(Coordinate.newInstance(0, 10)).build())
+                .setPickupLocation(PickupLocation.newInstance(
+                        Location.Builder.newInstance().setCoordinate(Coordinate.newInstance(0, 10)).build()))
                 .setDeliveryLocation(Location.Builder.newInstance().setCoordinate(Coordinate.newInstance(10, 10)).build())
                 .build();
         Shipment s2 = Shipment.Builder.newInstance("ship2")
-                .setPickupLocation(Location.Builder.newInstance().setCoordinate(Coordinate.newInstance(0, 20)).build())
+                .setPickupLocation(PickupLocation.newInstance(
+                        Location.Builder.newInstance().setCoordinate(Coordinate.newInstance(0, 20)).build()))
                 .setDeliveryLocation(Location.Builder.newInstance().setCoordinate(Coordinate.newInstance(10, 20)).build())
                 .build();
         Shipment s3 = Shipment.Builder.newInstance("ship3")
-                .setPickupLocation(Location.Builder.newInstance().setCoordinate(Coordinate.newInstance(0, 30)).build())
+                .setPickupLocation(PickupLocation.newInstance(
+                        Location.Builder.newInstance().setCoordinate(Coordinate.newInstance(0, 30)).build()))
                 .setDeliveryLocation(Location.Builder.newInstance().setCoordinate(Coordinate.newInstance(10, 30)).build())
                 .build();
+
 
         VehicleImpl v1 = VehicleImpl.Builder.newInstance("v1")
                 .setStartLocation(Location.newInstance(0, 0))

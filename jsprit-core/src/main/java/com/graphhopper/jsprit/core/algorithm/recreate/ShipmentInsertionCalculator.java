@@ -257,7 +257,6 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
             }
 
 
-
             if(pickupInsertionNotFulfilledBreak){
                 break;
             }
@@ -276,6 +275,7 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
         pickupShipment.setTheoreticalEarliestOperationStartTime(bestPickupTimeWindow.getStart());
         pickupShipment.setTheoreticalLatestOperationStartTime(bestPickupTimeWindow.getEnd());
         pickupShipment.setLocation(bestPickupLocation);
+        shipment.setSelectedPickupLocation(bestPickupLocation);
         deliverShipment.setTheoreticalEarliestOperationStartTime(bestDeliveryTimeWindow.getStart());
         deliverShipment.setTheoreticalLatestOperationStartTime(bestDeliveryTimeWindow.getEnd());
         insertionData.setVehicleDepartureTime(newVehicleDepartureTime);
@@ -345,116 +345,120 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
             }
 
             boolean pickupInsertionNotFulfilledBreak = true;
-            for (TimeWindow pickupTimeWindow : shipment.getPickupTimeWindows()) {
-                pickupShipment.setTheoreticalEarliestOperationStartTime(pickupTimeWindow.getStart());
-                pickupShipment.setTheoreticalLatestOperationStartTime(pickupTimeWindow.getEnd());
-                ActivityContext activityContext = new ActivityContext();
-                activityContext.setInsertionIndex(i);
-                insertionContext.setActivityContext(activityContext);
+            Collection<PickupLocation> locations = shipment.getPickupLocations();
+            for(PickupLocation pickupLocation : locations) {
+                for (TimeWindow pickupTimeWindow : pickupLocation.getPickupTimeWindows()) {
+                    pickupShipment.setTheoreticalEarliestOperationStartTime(pickupTimeWindow.getStart());
+                    pickupShipment.setTheoreticalLatestOperationStartTime(pickupTimeWindow.getEnd());
+                    ActivityContext activityContext = new ActivityContext();
+                    activityContext.setInsertionIndex(i);
+                    insertionContext.setActivityContext(activityContext);
 
-                ConstraintsStatus pickupStatus = fulfilled(insertionContext, prevAct, pickupShipment, nextAct,
-                        prevActEndTime, failedActivityConstraints, constraintManager);
+                    ConstraintsStatus pickupStatus = fulfilled(insertionContext, prevAct, pickupShipment, nextAct,
+                            prevActEndTime, failedActivityConstraints, constraintManager);
 
-                if (pickupStatus.equals(ConstraintsStatus.NOT_FULFILLED)) {
-                    pickupInsertionNotFulfilledBreak = false;
-                    continue;
-                } else if (pickupStatus.equals(ConstraintsStatus.NOT_FULFILLED_BREAK)) {
-                    continue;
-                } else if (pickupStatus.equals(ConstraintsStatus.FULFILLED)) {
-                    pickupInsertionNotFulfilledBreak = false;
-                }
-
-                InsertionCostBreakdown pickupActBreakdown = constraintManager.getActivityCostsBreakdown(
-                        insertionContext, prevAct, pickupShipment, nextAct, prevActEndTime);
-                double additionalPickupICosts = pickupActBreakdown.getTotal();
-                double pickupAIC = calculate(insertionContext, prevAct, pickupShipment, nextAct, prevActEndTime);
-
-                TourActivity prevAct_deliveryLoop = pickupShipment;
-                double shipmentPickupArrTime = prevActEndTime + transportCosts.getTransportTime(
-                        prevAct.getLocation(), pickupShipment.getLocation(), prevActEndTime, newDriver, newVehicle);
-                double shipmentPickupEndTime = Math.max(shipmentPickupArrTime, pickupShipment.getTheoreticalEarliestOperationStartTime())
-                        + activityCosts.getActivityDuration(prevAct, pickupShipment, shipmentPickupArrTime, newDriver, newVehicle);
-
-                pickupContext.setArrivalTime(shipmentPickupArrTime);
-                pickupContext.setEndTime(shipmentPickupEndTime);
-                pickupContext.setInsertionIndex(i);
-                insertionContext.setRelatedActivityContext(pickupContext);
-
-                double prevActEndTime_deliveryLoop = shipmentPickupEndTime;
-
-                // Delivery loop
-                int j = i;
-                boolean tourEnd_deliveryLoop = false;
-                while (!tourEnd_deliveryLoop) {
-                    TourActivity nextAct_deliveryLoop;
-                    if (j < activitiesSize) {
-                        nextAct_deliveryLoop = activities.get(j);
-                    } else {
-                        nextAct_deliveryLoop = end;
-                        tourEnd_deliveryLoop = true;
+                    if (pickupStatus.equals(ConstraintsStatus.NOT_FULFILLED)) {
+                        pickupInsertionNotFulfilledBreak = false;
+                        continue;
+                    } else if (pickupStatus.equals(ConstraintsStatus.NOT_FULFILLED_BREAK)) {
+                        continue;
+                    } else if (pickupStatus.equals(ConstraintsStatus.FULFILLED)) {
+                        pickupInsertionNotFulfilledBreak = false;
                     }
 
-                    boolean deliveryInsertionNotFulfilledBreak = true;
-                    for (TimeWindow deliveryTimeWindow : shipment.getDeliveryTimeWindows()) {
-                        deliverShipment.setTheoreticalEarliestOperationStartTime(deliveryTimeWindow.getStart());
-                        deliverShipment.setTheoreticalLatestOperationStartTime(deliveryTimeWindow.getEnd());
-                        ActivityContext activityContext_ = new ActivityContext();
-                        activityContext_.setInsertionIndex(j);
-                        insertionContext.setActivityContext(activityContext_);
+                    InsertionCostBreakdown pickupActBreakdown = constraintManager.getActivityCostsBreakdown(
+                            insertionContext, prevAct, pickupShipment, nextAct, prevActEndTime);
+                    double additionalPickupICosts = pickupActBreakdown.getTotal();
+                    double pickupAIC = calculate(insertionContext, prevAct, pickupShipment, nextAct, prevActEndTime);
 
-                        ConstraintsStatus deliveryStatus = fulfilled(insertionContext, prevAct_deliveryLoop, deliverShipment,
-                                nextAct_deliveryLoop, prevActEndTime_deliveryLoop, failedActivityConstraints, constraintManager);
+                    TourActivity prevAct_deliveryLoop = pickupShipment;
+                    double shipmentPickupArrTime = prevActEndTime + transportCosts.getTransportTime(
+                            prevAct.getLocation(), pickupShipment.getLocation(), prevActEndTime, newDriver, newVehicle);
+                    double shipmentPickupEndTime = Math.max(shipmentPickupArrTime, pickupShipment.getTheoreticalEarliestOperationStartTime())
+                            + activityCosts.getActivityDuration(prevAct, pickupShipment, shipmentPickupArrTime, newDriver, newVehicle);
 
-                        if (deliveryStatus.equals(ConstraintsStatus.FULFILLED)) {
-                            InsertionCostBreakdown deliveryActBreakdown = constraintManager.getActivityCostsBreakdown(
-                                    insertionContext, prevAct_deliveryLoop, deliverShipment, nextAct_deliveryLoop, prevActEndTime_deliveryLoop);
-                            double additionalDeliveryICosts = deliveryActBreakdown.getTotal();
-                            double deliveryAIC = calculate(insertionContext, prevAct_deliveryLoop, deliverShipment,
-                                    nextAct_deliveryLoop, prevActEndTime_deliveryLoop);
-                            double totalCost = pickupAIC + deliveryAIC + additionalICostsAtRouteLevel
-                                    + additionalPickupICosts + additionalDeliveryICosts;
+                    pickupContext.setArrivalTime(shipmentPickupArrTime);
+                    pickupContext.setEndTime(shipmentPickupEndTime);
+                    pickupContext.setInsertionIndex(i);
+                    insertionContext.setRelatedActivityContext(pickupContext);
 
-                            // Create InsertionData for this (pickup, delivery) position
-                            InsertionData insertionData = new InsertionData(totalCost, i, j, newVehicle, newDriver);
+                    double prevActEndTime_deliveryLoop = shipmentPickupEndTime;
 
-                            // Build breakdown
-                            InsertionCostBreakdown breakdown = new InsertionCostBreakdown();
-                            breakdown.merge(routeBreakdown);
-                            breakdown.merge(pickupActBreakdown);
-                            breakdown.merge(deliveryActBreakdown);
-                            breakdown.add("PickupInsertion", pickupAIC);
-                            breakdown.add("DeliveryInsertion", deliveryAIC);
-                            insertionData.setCostBreakdown(breakdown);
-
-                            // Create fresh activities for this position's events
-                            TourActivity pickupForPosition = activityFactory.createActivities(shipment).get(0);
-                            TourActivity deliveryForPosition = activityFactory.createActivities(shipment).get(1);
-                            pickupForPosition.setTheoreticalEarliestOperationStartTime(pickupTimeWindow.getStart());
-                            pickupForPosition.setTheoreticalLatestOperationStartTime(pickupTimeWindow.getEnd());
-                            deliveryForPosition.setTheoreticalEarliestOperationStartTime(deliveryTimeWindow.getStart());
-                            deliveryForPosition.setTheoreticalLatestOperationStartTime(deliveryTimeWindow.getEnd());
-
-                            insertionData.setVehicleDepartureTime(newVehicleDepartureTime);
-                            addActivitiesAndVehicleSwitch(insertionData, currentRoute, newVehicle,
-                                    pickupForPosition, i, deliveryForPosition, j, newVehicleDepartureTime);
-
-                            allPositions.add(insertionData);
-                            deliveryInsertionNotFulfilledBreak = false;
-                        } else if (deliveryStatus.equals(ConstraintsStatus.NOT_FULFILLED)) {
-                            deliveryInsertionNotFulfilledBreak = false;
+                    // Delivery loop
+                    int j = i;
+                    boolean tourEnd_deliveryLoop = false;
+                    while (!tourEnd_deliveryLoop) {
+                        TourActivity nextAct_deliveryLoop;
+                        if (j < activitiesSize) {
+                            nextAct_deliveryLoop = activities.get(j);
+                        } else {
+                            nextAct_deliveryLoop = end;
+                            tourEnd_deliveryLoop = true;
                         }
-                    }
-                    if (deliveryInsertionNotFulfilledBreak) {
-                        break;
-                    }
 
-                    double nextActArrTime = prevActEndTime_deliveryLoop + transportCosts.getTransportTime(
-                            prevAct_deliveryLoop.getLocation(), nextAct_deliveryLoop.getLocation(),
-                            prevActEndTime_deliveryLoop, newDriver, newVehicle);
-                    prevActEndTime_deliveryLoop = Math.max(nextActArrTime, nextAct_deliveryLoop.getTheoreticalEarliestOperationStartTime())
-                            + activityCosts.getActivityDuration(prevAct_deliveryLoop, nextAct_deliveryLoop, nextActArrTime, newDriver, newVehicle);
-                    prevAct_deliveryLoop = nextAct_deliveryLoop;
-                    j++;
+                        boolean deliveryInsertionNotFulfilledBreak = true;
+                        for (TimeWindow deliveryTimeWindow : shipment.getDeliveryTimeWindows()) {
+                            deliverShipment.setTheoreticalEarliestOperationStartTime(deliveryTimeWindow.getStart());
+                            deliverShipment.setTheoreticalLatestOperationStartTime(deliveryTimeWindow.getEnd());
+                            ActivityContext activityContext_ = new ActivityContext();
+                            activityContext_.setInsertionIndex(j);
+                            insertionContext.setActivityContext(activityContext_);
+
+                            ConstraintsStatus deliveryStatus = fulfilled(insertionContext, prevAct_deliveryLoop, deliverShipment,
+                                    nextAct_deliveryLoop, prevActEndTime_deliveryLoop, failedActivityConstraints, constraintManager);
+
+                            if (deliveryStatus.equals(ConstraintsStatus.FULFILLED)) {
+                                InsertionCostBreakdown deliveryActBreakdown = constraintManager.getActivityCostsBreakdown(
+                                        insertionContext, prevAct_deliveryLoop, deliverShipment, nextAct_deliveryLoop, prevActEndTime_deliveryLoop);
+                                double additionalDeliveryICosts = deliveryActBreakdown.getTotal();
+                                double deliveryAIC = calculate(insertionContext, prevAct_deliveryLoop, deliverShipment,
+                                        nextAct_deliveryLoop, prevActEndTime_deliveryLoop);
+                                double totalCost = pickupAIC + deliveryAIC + additionalICostsAtRouteLevel
+                                        + additionalPickupICosts + additionalDeliveryICosts;
+
+                                // Create InsertionData for this (pickup, delivery) position
+                                InsertionData insertionData = new InsertionData(totalCost, i, j, newVehicle, newDriver);
+
+                                // Build breakdown
+                                InsertionCostBreakdown breakdown = new InsertionCostBreakdown();
+                                breakdown.merge(routeBreakdown);
+                                breakdown.merge(pickupActBreakdown);
+                                breakdown.merge(deliveryActBreakdown);
+                                breakdown.add("PickupInsertion", pickupAIC);
+                                breakdown.add("DeliveryInsertion", deliveryAIC);
+                                insertionData.setCostBreakdown(breakdown);
+
+                                // Create fresh activities for this position's events
+                                TourActivity pickupForPosition = activityFactory.createActivities(shipment).get(0);
+                                TourActivity deliveryForPosition = activityFactory.createActivities(shipment).get(1);
+                                pickupForPosition.setTheoreticalEarliestOperationStartTime(pickupTimeWindow.getStart());
+                                pickupForPosition.setTheoreticalLatestOperationStartTime(pickupTimeWindow.getEnd());
+                                pickupForPosition.setLocation(pickupLocation.getLocation());
+                                deliveryForPosition.setTheoreticalEarliestOperationStartTime(deliveryTimeWindow.getStart());
+                                deliveryForPosition.setTheoreticalLatestOperationStartTime(deliveryTimeWindow.getEnd());
+
+                                insertionData.setVehicleDepartureTime(newVehicleDepartureTime);
+                                addActivitiesAndVehicleSwitch(insertionData, currentRoute, newVehicle,
+                                        pickupForPosition, i, deliveryForPosition, j, newVehicleDepartureTime);
+
+                                allPositions.add(insertionData);
+                                deliveryInsertionNotFulfilledBreak = false;
+                            } else if (deliveryStatus.equals(ConstraintsStatus.NOT_FULFILLED)) {
+                                deliveryInsertionNotFulfilledBreak = false;
+                            }
+                        }
+                        if (deliveryInsertionNotFulfilledBreak) {
+                            break;
+                        }
+
+                        double nextActArrTime = prevActEndTime_deliveryLoop + transportCosts.getTransportTime(
+                                prevAct_deliveryLoop.getLocation(), nextAct_deliveryLoop.getLocation(),
+                                prevActEndTime_deliveryLoop, newDriver, newVehicle);
+                        prevActEndTime_deliveryLoop = Math.max(nextActArrTime, nextAct_deliveryLoop.getTheoreticalEarliestOperationStartTime())
+                                + activityCosts.getActivityDuration(prevAct_deliveryLoop, nextAct_deliveryLoop, nextActArrTime, newDriver, newVehicle);
+                        prevAct_deliveryLoop = nextAct_deliveryLoop;
+                        j++;
+                    }
                 }
             }
             if (pickupInsertionNotFulfilledBreak) {

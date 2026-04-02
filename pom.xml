@@ -99,12 +99,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
-                <configuration>
-                    <!--compilerArgument>-XDignore.symbol.file</compilerArgument>
-                    <fork>true</fork-->
-                    <source>${jdkVersion}</source>
-                    <target>${jdkVersion}</target>
-                </configuration>
+                
             </plugin>
 
             <plugin>

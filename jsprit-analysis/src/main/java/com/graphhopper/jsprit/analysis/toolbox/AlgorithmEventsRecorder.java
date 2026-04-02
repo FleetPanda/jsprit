@@ -26,6 +26,7 @@ import com.graphhopper.jsprit.core.algorithm.recreate.listener.InsertionEndsList
 import com.graphhopper.jsprit.core.algorithm.recreate.listener.InsertionStartsListener;
 import com.graphhopper.jsprit.core.algorithm.ruin.listener.RuinListener;
 import com.graphhopper.jsprit.core.problem.AbstractActivity;
+import com.graphhopper.jsprit.core.problem.Location;
 import com.graphhopper.jsprit.core.problem.VehicleRoutingProblem;
 import com.graphhopper.jsprit.core.problem.job.Job;
 import com.graphhopper.jsprit.core.problem.job.Service;
@@ -310,11 +311,11 @@ public class AlgorithmEventsRecorder implements RuinListener, IterationStartsLis
             markService(service);
         } else if (job.getJobType().isShipment()) {
             Shipment shipment = (Shipment) job;
-            String fromNodeId = getFromNodeId(shipment);
-            shipment.getPickupLocations().stream().forEach(pickupLocation -> {
-                addNode(fromNodeId, pickupLocation.getLocation().getCoordinate());
-            });
-            //addNode(fromNodeId, shipment.getPickupLocation().getCoordinate());
+            String fromNodeId = getFromNodeId(shipment);            
+            Location selectedLocation = shipment.getSelectedPickupLocation();
+            if (selectedLocation != null) {
+                addNode(fromNodeId, selectedLocation.getCoordinate());
+            }
             String toNodeId = getToNodeId(shipment);
             addNode(toNodeId, shipment.getDeliveryLocation().getCoordinate());
             markShipment(shipment);
