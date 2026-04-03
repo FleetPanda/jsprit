@@ -562,7 +562,7 @@ public class VehicleRoutingProblem {
         private TimeWindow getTimeWindowForSpec(Job job, ActivitySpec actSpec) {
             Activity activity = getActivityForSpec(job, actSpec.type());
             Collection<TimeWindow> timeWindows = activity.getTimeWindows();
-
+        
             if (actSpec.options() != null && actSpec.options().timeWindowIndex() != null) {
                 int index = actSpec.options().timeWindowIndex();
                 return timeWindows.stream()
@@ -571,11 +571,13 @@ public class VehicleRoutingProblem {
                         .orElseThrow(() -> new IllegalArgumentException(
                                 "Time window index %d out of bounds for job '%s'".formatted(index, job.getId())));
             }
-
-            // Default: use first time window
-            return timeWindows.iterator().next();
+        
+            // Default: use first time window, or default if empty
+            return timeWindows.stream()
+                    .findFirst()
+                    .orElse(TimeWindow.newInstance(0.0, Double.MAX_VALUE));
         }
-
+        
         private Activity getActivityForSpec(Job job, ActivityType type) {
             List<Activity> activities = job.getActivities();
             return switch (type) {
