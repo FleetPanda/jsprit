@@ -308,7 +308,7 @@ public class AdaptiveSpatialFilter {
         if (job instanceof Service) {
             return ((Service) job).getLocation();
         } else if (job instanceof Shipment) {
-            return ((Shipment) job).getSelectedPickupLocation();
+            return ((Shipment) job).getSelectedPickupLocation().getLocation();
         }
         return null;
     }

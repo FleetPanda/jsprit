@@ -95,11 +95,6 @@ public final class PickupService extends AbstractActivity implements PickupActiv
         this.theoreticalLatest = latest;
     }
 
-    @Override
-    public void setLocation(Location location) {
-
-    }
-
 
     @Override
     public double getOperationTime() {

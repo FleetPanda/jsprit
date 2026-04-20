@@ -43,8 +43,8 @@ class PickupShipmentTest {
                         ).setDeliveryLocation(Location.newInstance("deliveryLoc"))
                         .setDeliveryTimeWindow(TimeWindow.newInstance(3., 4.)).addSizeDimension(0, 10).addSizeDimension(1, 100).addSizeDimension(2, 1000).build();
         pickup = new PickupShipment(shipment);
-        pickup.setTheoreticalEarliestOperationStartTime(shipment.getPickupLocations().stream().findFirst().get().getPickupTimeWindow().getStart());
-        pickup.setTheoreticalLatestOperationStartTime(shipment.getPickupLocations().stream().findFirst().get().getPickupTimeWindow().getEnd());
+        pickup.setTheoreticalEarliestOperationStartTime(shipment.getSelectedPickupLocation().getPickupTimeWindow().getStart());
+        pickup.setTheoreticalLatestOperationStartTime(shipment.getSelectedPickupLocation().getPickupTimeWindow().getEnd());
     }
 
     @Test

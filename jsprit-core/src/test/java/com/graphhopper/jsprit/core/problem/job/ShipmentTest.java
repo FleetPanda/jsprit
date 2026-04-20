@@ -150,8 +150,8 @@ class ShipmentTest {
     @DisplayName("When Pickup Location Id Is Set _ it Should Be Done Correctly")
     void whenPickupLocationIdIsSet_itShouldBeDoneCorrectly() {
         Shipment s = Shipment.Builder.newInstance("s").setDeliveryLocation(TestUtils.loc("delLoc")).setPickupLocation(PickupLocation.newInstance(Location.Builder.newInstance().setId("pickLoc").build())).build();
-        assertEquals(s.getSelectedPickupLocation().getId(), "pickLoc");
-        assertEquals(s.getSelectedPickupLocation().getId(), "pickLoc");
+        assertEquals(s.getSelectedPickupLocation().getLocation().getId(), "pickLoc");
+        assertEquals(s.getSelectedPickupLocation().getLocation().getId(), "pickLoc");
     }
 
     @Test
@@ -167,10 +167,10 @@ class ShipmentTest {
     @DisplayName("When Pickup Coord Is Set _ it Should Be Done Correctly")
     void whenPickupCoordIsSet_itShouldBeDoneCorrectly() {
         Shipment s = Shipment.Builder.newInstance("s").setDeliveryLocation(TestUtils.loc("delLoc")).setPickupLocation(PickupLocation.newInstance(Location.Builder.newInstance().setId("pickLoc").setCoordinate(Coordinate.newInstance(1, 2)).build())).build();
-        assertEquals(1.0, s.getSelectedPickupLocation().getCoordinate().getX(), 0.01);
-        assertEquals(2.0, s.getSelectedPickupLocation().getCoordinate().getY(), 0.01);
-        assertEquals(1.0, s.getSelectedPickupLocation().getCoordinate().getX(), 0.01);
-        assertEquals(2.0, s.getSelectedPickupLocation().getCoordinate().getY(), 0.01);
+        assertEquals(1.0, s.getSelectedPickupLocation().getLocation().getCoordinate().getX(), 0.01);
+        assertEquals(2.0, s.getSelectedPickupLocation().getLocation().getCoordinate().getY(), 0.01);
+        assertEquals(1.0, s.getSelectedPickupLocation().getLocation().getCoordinate().getX(), 0.01);
+        assertEquals(2.0, s.getSelectedPickupLocation().getLocation().getCoordinate().getY(), 0.01);
     }
 
     @Test
@@ -490,8 +490,8 @@ class ShipmentTest {
     @DisplayName("When Setting Location _ it Should Work")
     void whenSettingLocation_itShouldWork() {
         Shipment s = Shipment.Builder.newInstance("s").setPickupLocation(PickupLocation.newInstance(Location.Builder.newInstance().setId("loc").build())).setDeliveryLocation(Location.Builder.newInstance().setId("del").build()).build();
-        assertEquals(s.getSelectedPickupLocation().getId(), "loc");
-        assertEquals(s.getSelectedPickupLocation().getId(), "loc");
+        assertEquals(s.getSelectedPickupLocation().getLocation().getId(), "loc");
+        assertEquals(s.getSelectedPickupLocation().getLocation().getId(), "loc");
         assertEquals(s.getDeliveryLocation().getId(), "del");
         assertEquals(s.getDeliveryLocation().getId(), "del");
     }

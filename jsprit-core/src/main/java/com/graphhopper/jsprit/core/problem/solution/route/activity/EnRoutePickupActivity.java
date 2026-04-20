@@ -91,11 +91,6 @@ public final class EnRoutePickupActivity extends AbstractActivity implements Pic
     }
 
     @Override
-    public void setLocation(Location location) {
-
-    }
-
-    @Override
     public double getOperationTime() {
         return pickup.getServiceDuration();
     }

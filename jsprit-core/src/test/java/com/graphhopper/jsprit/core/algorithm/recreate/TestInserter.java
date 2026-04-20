@@ -167,7 +167,7 @@ public class TestInserter {
         assertEquals(4, route.getTourActivities().getActivities().size());
         assertEquals(
                 route.getTourActivities().getActivities().get(2).getLocation().getId(),
-                shipmentToInsert.getPickupLocations().stream().findFirst().get().getLocation().getId()
+                shipmentToInsert.getSelectedPickupLocation().getLocation().getId()
         );
         assertEquals(route.getTourActivities().getActivities().get(3).getLocation().getId(), shipmentToInsert.getDeliveryLocation().getId());
         assertEquals(route.getEnd().getLocation().getId(), vehicle.getEndLocation().getId());
@@ -215,7 +215,7 @@ public class TestInserter {
         assertEquals(4, route.getTourActivities().getActivities().size());
         assertEquals(
                 route.getTourActivities().getActivities().get(2).getLocation().getId(),
-                shipmentToInsert.getPickupLocations().stream().findFirst().get().getLocation().getId()
+                shipmentToInsert.getSelectedPickupLocation().getLocation().getId()
         );
         assertEquals(route.getTourActivities().getActivities().get(3).getLocation().getId(), shipmentToInsert.getDeliveryLocation().getId());
         assertEquals(route.getEnd().getLocation().getId(), shipmentToInsert.getDeliveryLocation().getId());

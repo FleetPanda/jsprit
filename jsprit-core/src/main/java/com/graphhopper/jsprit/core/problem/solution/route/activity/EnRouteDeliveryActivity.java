@@ -85,12 +85,6 @@ public final class EnRouteDeliveryActivity extends AbstractActivity implements D
     }
 
     @Override
-    public void setLocation(Location location) {
-
-    }
-
-
-    @Override
     public double getTheoreticalEarliestOperationStartTime() {
         return theoreticalEarliest;
     }

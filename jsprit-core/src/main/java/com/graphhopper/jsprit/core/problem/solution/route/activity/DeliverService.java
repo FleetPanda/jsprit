@@ -84,11 +84,6 @@ public final class DeliverService extends AbstractActivity implements DeliveryAc
         theoreticalLatest = latest;
     }
 
-    @Override
-    public void setLocation(Location location) {
-
-    }
-
 
     @Override
     public double getTheoreticalEarliestOperationStartTime() {

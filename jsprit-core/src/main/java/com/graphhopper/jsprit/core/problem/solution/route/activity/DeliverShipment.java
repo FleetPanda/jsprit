@@ -70,11 +70,6 @@ public final class DeliverShipment extends AbstractActivity implements DeliveryA
         this.latest = latest;
     }
 
-    @Override
-    public void setLocation(Location location) {
-        this.shipment.setPickupLocation(location);
-    }
-
 
     @Override
     public String getName() {

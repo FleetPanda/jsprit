@@ -136,11 +136,6 @@ public class ServiceActivity extends AbstractActivity implements TourActivity.Jo
         theoreticalLatest = latest;
     }
 
-    @Override
-    public void setLocation(Location location) {
-
-    }
-
 
     @Override
     public double getOperationTime() {
