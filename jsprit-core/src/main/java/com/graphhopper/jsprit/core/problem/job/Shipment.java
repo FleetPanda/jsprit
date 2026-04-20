@@ -382,59 +382,67 @@ public class Shipment extends AbstractJob {
     private List<Activity> activities = new ArrayList<>();
 
     // Transient field to store the selected pickup location during insertion
-    private transient Location selectedPickupLocation = null;
+    private transient PickupLocation selectedPickupLocation = null;
+
+    private double[] adjustedSize;
 
     /**
      * Sets the selected pickup location (used during insertion calculation).
      * This is a transient field and is not persisted.
+     * FIXED: Now receives PickupLocation object instead of Location
      */
-    public void setSelectedPickupLocation(Location location) {
-        this.selectedPickupLocation = location;
+    public void setSelectedPickupLocation(PickupLocation pickupLocation) {
+        this.selectedPickupLocation = pickupLocation;
     }
 
     /**
      * Gets the selected pickup location (if set during insertion).
      * Returns the first pickup location if none was explicitly selected.
+     * FIXED: Now returns PickupLocation object instead of Location
      */
-    public Location getSelectedPickupLocation() {
+    public PickupLocation getSelectedPickupLocation() {
         if (selectedPickupLocation != null) {
             return selectedPickupLocation;
         }
         // Fallback: return first pickup location
         Collection<PickupLocation> locations = getPickupLocations();
         if (!locations.isEmpty()) {
-            return locations.iterator().next().getLocation();
+            return locations.iterator().next();
         }
         return null;
     }
 
     public TimeWindow getSelectedPickupTimeWindow() {
-        Location selectedLocation = getSelectedPickupLocation();
-        if (selectedLocation == null) {
+        PickupLocation selectedPL = getSelectedPickupLocation();
+        if (selectedPL == null) {
             return null;
         }
-        for (PickupLocation pl : getPickupLocations()) {
-            if (pl.getLocation().equals(selectedLocation)) {
-                return pl.getPickupTimeWindow();
-            }
-        }
-        return null;
+        return selectedPL.getPickupTimeWindow();
     }
 
     public PickupLocation getSelectedPickupLocationObject() {
-        Location selectedLocation = getSelectedPickupLocation();
-        if (selectedLocation == null) {
-            return null;
+        return getSelectedPickupLocation();
+    }
+
+    public double[] getAdjustedSize() {
+        if (adjustedSize != null) {
+            return adjustedSize;
         }
-        for (PickupLocation pl : getPickupLocations()) {
-            if (pl.getLocation().equals(selectedLocation)) {
-                return pl;
-            }
+        
+        // Converter Capacity para double[]
+        Capacity capacity = getSize();
+        double[] sizeArray = new double[capacity.getNuOfDimensions()];
+        for (int i = 0; i < capacity.getNuOfDimensions(); i++) {
+            sizeArray[i] = capacity.get(i);
         }
-        return null;
+        return sizeArray;
     }
     
-    
+
+    public void setAdjustedSize(double[] size) {
+        this.adjustedSize = size;
+    }
+
 
     Shipment(Builder builder) {
         setUserData(builder.userData);
@@ -525,7 +533,7 @@ public class Shipment extends AbstractJob {
         return "[id=" + id + "][name=" + name + "][pickupLocations=" + pickupLocations
                 + "][deliveryLocation=" + deliveryLocation_ + "][capacity=" + capacity
                 + "][pickupServiceTime=" + pickupServiceTime + "][deliveryServiceTime="
-                + deliveryServiceTime + "][pickupTimeWindows=" + getPickupLocations().stream().findFirst().get().getPickupTimeWindows()
+                + deliveryServiceTime + "][pickupTimeWindows=" + getSelectedPickupLocation().getPickupTimeWindows()
                 + "][deliveryTimeWindows=" + deliveryTimeWindows + "]";
     }
 

@@ -290,6 +290,14 @@ public class Capacity {
         return 0;
     }
 
+    public void set(int index, double value) {
+        if (index < 0 || index >= dimensions.length) {
+            throw new IllegalArgumentException("Index out of bounds: " + index);
+        }
+        dimensions[index] = (int) value;
+    }
+    
+
     /**
      * Returns true if this capacity is less or equal than the capacity toCompare, i.e. if none of the capacity dimensions > than the corresponding dimension in toCompare.
      *

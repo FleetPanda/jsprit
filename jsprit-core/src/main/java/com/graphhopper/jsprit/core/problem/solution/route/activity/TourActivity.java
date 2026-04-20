@@ -37,8 +37,6 @@ public interface TourActivity extends HasIndex {
 
     void setTheoreticalLatestOperationStartTime(double latest);
 
-    void setLocation(Location location);
-
     /**
      * Basic interface of job-activies.
      * <p>

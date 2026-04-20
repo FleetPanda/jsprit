@@ -55,8 +55,8 @@ public abstract class AbstractJob implements Job {
         return userData;
     }
 
-    protected void setUserData(Object userData) {
+    public void setUserData(Object userData) {
         this.userData = userData;
-    }
+    }    
 
 }

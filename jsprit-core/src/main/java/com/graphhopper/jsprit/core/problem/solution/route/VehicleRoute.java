@@ -264,10 +264,16 @@ public class VehicleRoute {
          * @throws IllegalArgumentException if method has already been called with the specified shipment.
          */
         public Builder addPickup(Shipment shipment) {
-            if (shipment.getPickupLocations().stream().findFirst().get().getLocation()== null) {
+            // FIXED: Use selected pickup location if available, otherwise use first
+            PickupLocation selectedPickup = shipment.getSelectedPickupLocation();
+            if (selectedPickup == null) {
+                selectedPickup = shipment.getPickupLocations().stream().findFirst().get();
+            }
+            
+            if (selectedPickup.getLocation() == null) {
                 return addPickup(shipment, TimeWindow.newInstance(0.0, Double.MAX_VALUE));
             }
-            return addPickup(shipment, shipment.getPickupLocations().stream().findFirst().get().getPickupTimeWindow());
+            return addPickup(shipment, selectedPickup.getPickupTimeWindow());
         }
 
         public Builder addPickup(Shipment shipment, TimeWindow pickupTimeWindow) {
@@ -339,6 +345,8 @@ public class VehicleRoute {
     private End end;
 
     private int index = -1;
+
+    private final String routeId = java.util.UUID.randomUUID().toString();
 
     /**
      * Copy constructor copying a route.
@@ -494,6 +502,10 @@ public class VehicleRoute {
      */
     public End getEnd() {
         return end;
+    }
+
+    public String getRouteId() {
+        return routeId;
     }
 
     @Override

@@ -67,17 +67,18 @@ public final class PickupShipment extends AbstractActivity implements PickupActi
     }
 
     @Override
-    public void setLocation(Location location) {
-        this.shipment.setPickupLocation(location);
-    }
-
-    @Override
     public String getName() {
         return "pickupShipment";
     }
 
     @Override
     public Location getLocation() {
+        // FIXED: Return the selected pickup location, not the first one
+        PickupLocation selectedPickup = shipment.getSelectedPickupLocation();
+        if (selectedPickup != null) {
+            return selectedPickup.getLocation();
+        }
+        // Fallback: return first pickup location if none selected
         return getPickupLocations().stream().findFirst().get().getLocation();
     }
 
