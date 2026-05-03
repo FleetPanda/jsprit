@@ -346,14 +346,18 @@ public class VehicleRoute {
 
     private int index = -1;
 
-    private final String routeId = java.util.UUID.randomUUID().toString();
+    private final String routeId;
 
     /**
      * Copy constructor copying a route.
+     * Preserves the original routeId so that external maps keyed by routeId
+     * (e.g. compartmentResults in CompartmentAllocationStateUpdater) remain valid
+     * after the solution is copied during the best-ever memorization step.
      *
      * @param route to copy
      */
     private VehicleRoute(VehicleRoute route) {
+        this.routeId = route.routeId;  // preserve — do NOT generate a new UUID
         this.start = Start.copyOf(route.getStart());
         this.end = End.copyOf(route.getEnd());
         this.tourActivities = TourActivities.copyOf(route.getTourActivities());
@@ -367,6 +371,7 @@ public class VehicleRoute {
      * @param builder used to build route
      */
     private VehicleRoute(Builder builder) {
+        this.routeId = java.util.UUID.randomUUID().toString();
         this.tourActivities = builder.tourActivities;
         this.vehicle = builder.vehicle;
         this.driver = builder.driver;

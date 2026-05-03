@@ -147,4 +147,12 @@ public class VehicleRoutingAlgorithmListeners {
             }
         }
     }
+
+    public void bestSolutionUpdated(VehicleRoutingProblemSolution newBestSolution) {
+        for (PrioritizedVRAListener l : algorithmListeners) {
+            if (l.getListener() instanceof BestSolutionUpdatedListener) {
+                ((BestSolutionUpdatedListener) l.getListener()).onBestSolutionUpdated(newBestSolution);
+            }
+        }
+    }
 }

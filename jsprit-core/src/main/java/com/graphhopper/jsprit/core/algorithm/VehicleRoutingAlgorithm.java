@@ -343,8 +343,10 @@ public class VehicleRoutingAlgorithm {
         if (discoveredSolution == null) return;
         if (bestEver == null) {
             bestEver = discoveredSolution.getSolution();
+            algoListeners.bestSolutionUpdated(bestEver);
         } else if (discoveredSolution.getSolution().getCost() < bestEver.getCost()) {
             bestEver = discoveredSolution.getSolution();
+            algoListeners.bestSolutionUpdated(bestEver);
         }
     }
 
