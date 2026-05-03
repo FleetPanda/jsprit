@@ -37,6 +37,13 @@ public final class PickupShipment extends AbstractActivity implements PickupActi
 
     private double latest = Double.MAX_VALUE;
 
+    /**
+     * The pickup location chosen during insertion evaluation, stored on the activity
+     * instance rather than on the shared Shipment to avoid concurrent mutation.
+     * When set, getLocation() returns this instead of delegating to the Shipment.
+     */
+    private PickupLocation selectedPickupLocation;
+
     public PickupShipment(Shipment shipment) {
         super();
         this.shipment = shipment;
@@ -49,6 +56,8 @@ public final class PickupShipment extends AbstractActivity implements PickupActi
         setIndex(pickupShipmentActivity.getIndex());
         this.earliest = pickupShipmentActivity.getTheoreticalEarliestOperationStartTime();
         this.latest = pickupShipmentActivity.getTheoreticalLatestOperationStartTime();
+        // Propagate the selected pickup location to the copy
+        this.selectedPickupLocation = pickupShipmentActivity.selectedPickupLocation;
     }
 
     @Override
@@ -73,13 +82,26 @@ public final class PickupShipment extends AbstractActivity implements PickupActi
 
     @Override
     public Location getLocation() {
-        // FIXED: Return the selected pickup location, not the first one
-        PickupLocation selectedPickup = shipment.getSelectedPickupLocation();
-        if (selectedPickup != null) {
-            return selectedPickup.getLocation();
+        // Use the activity-local selected location if set by the Inserter.
+        // This avoids reading from the shared Shipment which could be mutated
+        // concurrently by other threads during insertion evaluation.
+        if (selectedPickupLocation != null) {
+            return selectedPickupLocation.getLocation();
         }
-        // Fallback: return first pickup location if none selected
+        // Fallback for single-pickup shipments or when no location was explicitly chosen
         return getPickupLocations().stream().findFirst().get().getLocation();
+    }
+
+    /**
+     * Sets the pickup location for this specific activity instance.
+     * Called by the Inserter after insertion decision — never touches the Shipment.
+     */
+    public void setSelectedPickupLocation(PickupLocation pickupLocation) {
+        this.selectedPickupLocation = pickupLocation;
+    }
+
+    public PickupLocation getSelectedPickupLocation() {
+        return selectedPickupLocation;
     }
 
     @Override

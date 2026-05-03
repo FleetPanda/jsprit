@@ -129,6 +129,7 @@ public final class ShipmentInsertionCalculatorFlex extends AbstractInsertionCalc
 
         TimeWindow bestPickupTimeWindow = null;
         TimeWindow bestDeliveryTimeWindow = null;
+        PickupLocation bestPickupLocation = null;
 
 
         Start start = new Start(newVehicle.getStartLocation(), newVehicle.getEarliestDeparture(), newVehicle.getLatestArrival());
@@ -227,6 +228,7 @@ public final class ShipmentInsertionCalculatorFlex extends AbstractInsertionCalc
                                             deliveryInsertionIndex = j;
                                             bestPickupTimeWindow = pickupTimeWindow;
                                             bestDeliveryTimeWindow = deliveryTimeWindow;
+                                            bestPickupLocation = pickupLocation;
                                         }
                                         deliveryInsertionNotFulfilledBreak = false;
                                     } else if (deliverShipmentConstraintStatus.equals(ConstraintsStatus.NOT_FULFILLED)) {
@@ -271,6 +273,9 @@ public final class ShipmentInsertionCalculatorFlex extends AbstractInsertionCalc
         deliverShipment.setTheoreticalEarliestOperationStartTime(bestDeliveryTimeWindow.getStart());
         deliverShipment.setTheoreticalLatestOperationStartTime(bestDeliveryTimeWindow.getEnd());
         insertionData.setVehicleDepartureTime(newVehicleDepartureTime);
+        // Persist the chosen pickup location in InsertionData — not on the Shipment — to
+        // avoid mutating shared job state during concurrent multi-thread evaluation.
+        insertionData.setSelectedPickupLocation(bestPickupLocation);
         insertionData.getEvents().add(new InsertActivity(currentRoute, newVehicle, deliverShipment, deliveryInsertionIndex));
         insertionData.getEvents().add(new InsertActivity(currentRoute, newVehicle, pickupShipment, pickupInsertionIndex));
         insertionData.getEvents().add(new SwitchVehicle(currentRoute, newVehicle, newVehicleDepartureTime));
