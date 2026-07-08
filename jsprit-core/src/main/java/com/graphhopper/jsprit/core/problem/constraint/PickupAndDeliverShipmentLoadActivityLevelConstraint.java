@@ -18,6 +18,8 @@
 package com.graphhopper.jsprit.core.problem.constraint;
 
 import com.graphhopper.jsprit.core.algorithm.state.InternalStates;
+import com.graphhopper.jsprit.core.algorithm.state.MinLoadAdjustmentProvider;
+import com.graphhopper.jsprit.core.algorithm.state.StateManager;
 import com.graphhopper.jsprit.core.problem.Capacity;
 import com.graphhopper.jsprit.core.problem.misc.JobInsertionContext;
 import com.graphhopper.jsprit.core.problem.solution.route.activity.DeliverShipment;
@@ -36,6 +38,24 @@ import com.graphhopper.jsprit.core.problem.solution.route.state.RouteAndActivity
  * @author schroeder
  */
 public class PickupAndDeliverShipmentLoadActivityLevelConstraint implements HardActivityConstraint {
+
+    // --- FP instrumentation (log-only, enabled via env FP_DEBUG_JOB=SO123,SO456) ---
+    private static final java.util.Set<String> DEBUG_JOBS;
+    static {
+        String env = System.getenv("FP_DEBUG_JOB");
+        if (env == null || env.trim().isEmpty()) DEBUG_JOBS = java.util.Collections.emptySet();
+        else DEBUG_JOBS = new java.util.HashSet<>(java.util.Arrays.asList(env.trim().split("\\s*,\\s*")));
+    }
+    private static boolean fpDebug(JobInsertionContext iFacts) {
+        return !DEBUG_JOBS.isEmpty() && iFacts.getJob() != null && DEBUG_JOBS.contains(iFacts.getJob().getId());
+    }
+    private static String fpActName(TourActivity act) {
+        if (act instanceof TourActivity.JobActivity) {
+            return act.getName() + "[" + ((TourActivity.JobActivity) act).getJob().getId() + "]";
+        }
+        return act.getName();
+    }
+    // -------------------------------------------------------------------------------
 
     private RouteAndActivityStateGetter stateManager;
 
@@ -72,18 +92,76 @@ public class PickupAndDeliverShipmentLoadActivityLevelConstraint implements Hard
             if (loadAtPrevAct == null) loadAtPrevAct = defaultValue;
         }
         if (isShipmentPickup(newAct)) {
-            Capacity addUp = Capacity.addup(loadAtPrevAct, newAct.getSize());
-            if (!addUp.isLessOrEqual(iFacts.getNewVehicle().getType().getCapacityDimensions())) {
+            Capacity effSize = effectivePickupSize(iFacts, newAct);
+            Capacity addUp = Capacity.addup(loadAtPrevAct, effSize);
+            boolean fits = addUp.isLessOrEqual(iFacts.getNewVehicle().getType().getCapacityDimensions());
+            if (fpDebug(iFacts)) {
+                System.err.println("[LOADC-DEBUG] job=" + iFacts.getJob().getId()
+                    + " PICKUP prev=" + fpActName(prevAct) + (prevAct instanceof Start ? "(LOAD_AT_BEGINNING)" : "")
+                    + " loadAtPrev=" + loadAtPrevAct
+                    + " effSize=" + effSize + " nominal=" + newAct.getSize()
+                    + " cap=" + iFacts.getNewVehicle().getType().getCapacityDimensions()
+                    + " verdict=" + (fits ? "OK" : "NOT_FULFILLED"));
+            }
+            if (!fits) {
                 return ConstraintsStatus.NOT_FULFILLED;
             }
         }
         if (isShipmentDelivery(newAct)) {
-            Capacity invert = Capacity.invert(newAct.getSize());
-            Capacity addUp = Capacity.addup(loadAtPrevAct, invert);
-            if (!addUp.isLessOrEqual(iFacts.getNewVehicle().getType().getCapacityDimensions()))
+            // Load on the segment carrying this shipment = loadAtPrevAct + what the sibling
+            // pickup ACTUALLY adds (effective size). Note DeliverShipment.getSize() is
+            // NEGATIVE (-nominal); in vanilla jSprit the term Capacity.invert(newAct.getSize())
+            // (= +nominal) was precisely the in-flight pickup contribution, since stored LOAD
+            // states do not include the not-yet-inserted shipment. Keeping BOTH the invert term
+            // and an inFlightPickup term double-counts the shipment (effective + nominal) and
+            // makes any job with effective + nominal > capacity uninsertable at every position.
+            Capacity inFlightPickup = Capacity.invert(newAct.getSize()); // +nominal fallback
+            if (iFacts.getJob() instanceof com.graphhopper.jsprit.core.problem.job.Shipment) {
+                for (TourActivity assoc : iFacts.getAssociatedActivities()) {
+                    if (assoc instanceof PickupShipment) {
+                        inFlightPickup = effectivePickupSize(iFacts, assoc);
+                    }
+                }
+            }
+            Capacity addUp = Capacity.addup(loadAtPrevAct, inFlightPickup);
+            boolean fits = addUp.isLessOrEqual(iFacts.getNewVehicle().getType().getCapacityDimensions());
+            if (fpDebug(iFacts)) {
+                System.err.println("[LOADC-DEBUG] job=" + iFacts.getJob().getId()
+                    + " DELIVERY prev=" + fpActName(prevAct) + (prevAct instanceof Start ? "(LOAD_AT_BEGINNING)" : "")
+                    + " loadAtPrev=" + loadAtPrevAct
+                    + " inFlightPickup=" + inFlightPickup
+                    + " deliverNominal=" + newAct.getSize()
+                    + " cap=" + iFacts.getNewVehicle().getType().getCapacityDimensions()
+                    + " verdict=" + (fits ? "OK" : "NOT_FULFILLED_BREAK"));
+            }
+            if (!fits)
                 return ConstraintsStatus.NOT_FULFILLED_BREAK;
         }
         return ConstraintsStatus.FULFILLED;
+    }
+
+    /**
+     * Effective pickup size for capacity evaluation. Consults the
+     * MinLoadAdjustmentProvider (if registered on a full StateManager) which
+     * unifies minLoad increases and initial-inventory reductions computed by
+     * the private project. Falls back to the nominal activity size.
+     */
+    private Capacity effectivePickupSize(JobInsertionContext iFacts, TourActivity newAct) {
+        Capacity original = newAct.getSize();
+        if (!(stateManager instanceof StateManager)) return original;
+        MinLoadAdjustmentProvider provider = ((StateManager) stateManager).getMinLoadAdjustmentProvider();
+        if (provider == null) return original;
+        if (!(newAct instanceof TourActivity.JobActivity)) return original;
+        String jobId = ((TourActivity.JobActivity) newAct).getJob().getId();
+        String routeId = iFacts.getRoute().getRouteId();
+        int adjustedDim0 = provider.getAdjustedSize(routeId, iFacts.getNewVehicle().getId(), jobId);
+        if (adjustedDim0 < 0) return original;
+        Capacity.Builder builder = Capacity.Builder.newInstance();
+        builder.addDimension(0, adjustedDim0);
+        for (int i = 1; i < original.getNuOfDimensions(); i++) {
+            builder.addDimension(i, original.get(i));
+        }
+        return builder.build();
     }
 
     private static boolean isShipmentDelivery(TourActivity newAct) {

@@ -120,6 +120,9 @@ class Inserter {
                 // because the Inserter runs single-threaded after the decision is made,
                 // and AffectedJobTracker/AdaptiveSpatialFilter need it during ruin.
                 if (iData.getSelectedPickupLocation() != null && pickupShipment instanceof PickupShipment) {
+                    System.err.println("[INSERTER] job=" + job.getId()
+                        + " applying loc=" + iData.getSelectedPickupLocation().getLocation().getId()
+                        + " onVehicle=" + iData.getSelectedPickupLocation().isOnVehicle());
                     ((PickupShipment) pickupShipment).setSelectedPickupLocation(iData.getSelectedPickupLocation());
                     ((Shipment) job).setSelectedPickupLocation(iData.getSelectedPickupLocation());
                 }

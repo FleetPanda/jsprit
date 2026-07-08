@@ -20,10 +20,12 @@ package com.graphhopper.jsprit.core.algorithm.state;
 import com.graphhopper.jsprit.core.algorithm.recreate.InsertionData;
 import com.graphhopper.jsprit.core.algorithm.recreate.listener.InsertionStartsListener;
 import com.graphhopper.jsprit.core.algorithm.recreate.listener.JobInsertedListener;
+import com.graphhopper.jsprit.core.algorithm.state.MinLoadAdjustmentProvider;
 import com.graphhopper.jsprit.core.problem.Capacity;
 import com.graphhopper.jsprit.core.problem.job.Job;
 import com.graphhopper.jsprit.core.problem.solution.route.VehicleRoute;
 import com.graphhopper.jsprit.core.problem.solution.route.activity.ActivityVisitor;
+import com.graphhopper.jsprit.core.problem.solution.route.activity.PickupActivity;
 import com.graphhopper.jsprit.core.problem.solution.route.activity.TourActivity;
 import com.graphhopper.jsprit.core.problem.solution.route.activity.TourActivity.JobActivity;
 
@@ -49,14 +51,9 @@ class UpdateLoads implements ActivityVisitor, StateUpdater, InsertionStartsListe
      */
     private Capacity currentLoad;
 
-    private Capacity defaultValue;
-
-    /**
-     * The route currently being visited.
-     * Set in begin(), cleared in finish().
-     * Used to look up minLoad adjustments keyed by routeId.
-     */
     private VehicleRoute currentRoute;
+
+    private Capacity defaultValue;
 
     public UpdateLoads(StateManager stateManager) {
         super();
@@ -78,45 +75,28 @@ class UpdateLoads implements ActivityVisitor, StateUpdater, InsertionStartsListe
         stateManager.putInternalTypedActivityState(act, InternalStates.LOAD, currentLoad);
     }
 
-    @Override
-    public void finish() {
-        currentLoad = Capacity.Builder.newInstance().build();
-        currentRoute = null;
-    }
-
-    /**
-     * Returns the effective size of the activity, applying any minLoad adjustment
-     * via the MinLoadAdjustmentProvider registered on the StateManager.
-     *
-     * Only dimension 0 is adjusted (quantity); other dimensions are preserved.
-     * If no provider is registered or no adjustment applies, returns the original size.
-     */
 
     private Capacity effectiveSize(TourActivity act) {
         Capacity original = act.getSize();
-        if (currentRoute == null || !(act instanceof JobActivity)) return original;
-
-        // MinLoad adjustments apply ONLY to pickups — the extra product is taken
-        // from the terminal and stays on the vehicle as retain after delivery.
-        // Deliveries always subtract the original ordered quantity.
-        if (!(act instanceof com.graphhopper.jsprit.core.problem.solution.route.activity.PickupActivity)) {
-            return original;
-        }
-
+        if (currentRoute == null || !(act instanceof TourActivity.JobActivity)) return original;
+        // Only apply minLoad adjustment to pickup activities
+        if (!(act instanceof com.graphhopper.jsprit.core.problem.solution.route.activity.PickupActivity)) return original;
         MinLoadAdjustmentProvider provider = stateManager.getMinLoadAdjustmentProvider();
         if (provider == null) return original;
-
-        String jobId = ((JobActivity) act).getJob().getId();
-        int adjustedDim0 = provider.getAdjustedSize(currentRoute.getRouteId(), jobId);
+        String jobId = ((TourActivity.JobActivity) act).getJob().getId();
+        int adjustedDim0 = provider.getAdjustedSize(currentRoute.getRouteId(), currentRoute.getVehicle().getId(), jobId);
         if (adjustedDim0 < 0) return original;
-
-        // Rebuild Capacity with adjusted dimension 0, preserving all other dimensions
         Capacity.Builder builder = Capacity.Builder.newInstance();
         builder.addDimension(0, adjustedDim0);
         for (int i = 1; i < original.getNuOfDimensions(); i++) {
             builder.addDimension(i, original.get(i));
         }
         return builder.build();
+    }
+
+    @Override
+    public void finish() {
+        currentLoad = Capacity.Builder.newInstance().build();
     }
 
     void insertionStarts(VehicleRoute route) {
@@ -129,6 +109,12 @@ class UpdateLoads implements ActivityVisitor, StateUpdater, InsertionStartsListe
             if (j.isDeliveredToVehicleEnd()) {
                 loadAtEnd = Capacity.addup(loadAtEnd, j.getSize());
             }
+        }
+        // Add vehicle's initial inventory to LOAD_AT_BEGINNING — product already loaded,
+        // no pickup activity needed. Constraints and load tracking see it automatically.
+        com.graphhopper.jsprit.core.problem.Capacity vehicleInitialLoad = route.getVehicle().getInitialLoad();
+        if (vehicleInitialLoad != null) {
+            loadAtDepot = Capacity.addup(loadAtDepot, vehicleInitialLoad);
         }
         stateManager.putTypedInternalRouteState(route, InternalStates.LOAD_AT_BEGINNING, loadAtDepot);
         stateManager.putTypedInternalRouteState(route, InternalStates.LOAD_AT_END, loadAtEnd);

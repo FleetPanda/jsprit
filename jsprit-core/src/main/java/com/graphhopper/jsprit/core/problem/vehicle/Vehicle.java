@@ -22,6 +22,7 @@ import com.graphhopper.jsprit.core.problem.HasIndex;
 import com.graphhopper.jsprit.core.problem.Location;
 import com.graphhopper.jsprit.core.problem.Skills;
 import com.graphhopper.jsprit.core.problem.job.Break;
+import com.graphhopper.jsprit.core.problem.Capacity;
 
 /**
  * Basic interface for vehicle-data.
@@ -79,6 +80,14 @@ public interface Vehicle extends HasId, HasIndex {
     Object getUserData();
 
     Break getBreak();
+
+    /**
+     * Returns the initial load pre-loaded on this vehicle at route start, or null if none.
+     * Used by UpdateLoads to initialize LOAD_AT_BEGINNING without a pickup activity.
+     */
+    default Capacity getInitialLoad() {
+        return null;
+    }
     // Switch to this as soon as we switct to Java 8:
     // default Object getUserData() {
     // return null;

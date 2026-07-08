@@ -28,9 +28,15 @@ package com.graphhopper.jsprit.core.algorithm.state;
 public interface MinLoadAdjustmentProvider {
 
     /**
-     * @param routeId the UUID of the VehicleRoute being evaluated
-     * @param jobId   the ID of the job whose pickup is being visited
-     * @return adjusted size for dimension 0, or -1 if no adjustment applies
+     * Returns the effective size (dimension 0) for a job's pickup, unifying:
+     * - minimum-loading increases (minLoad deficits computed per stop/group)
+     * - initial-inventory reductions (product already on the vehicle)
+     *
+     * @param routeId   the UUID of the VehicleRoute being evaluated
+     * @param vehicleId the vehicle of the route — needed to resolve the
+     *                  vehicle's initial-inventory pool during evaluation
+     * @param jobId     the ID of the job whose pickup is being visited
+     * @return effective size for dimension 0, or -1 if no adjustment applies
      */
-    int getAdjustedSize(String routeId, String jobId);
+    int getAdjustedSize(String routeId, String vehicleId, String jobId);
 }
