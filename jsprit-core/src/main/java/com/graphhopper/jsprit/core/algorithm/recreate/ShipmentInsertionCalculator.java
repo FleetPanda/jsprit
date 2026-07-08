@@ -47,25 +47,6 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ShipmentInsertionCalculator.class);
 
-    // --- FP instrumentation (log-only, enabled via env FP_DEBUG_JOB=SO123,SO456) ---
-    private static final java.util.Set<String> DEBUG_JOBS;
-    static {
-        String env = System.getenv("FP_DEBUG_JOB");
-        if (env == null || env.trim().isEmpty()) DEBUG_JOBS = java.util.Collections.emptySet();
-        else DEBUG_JOBS = new java.util.HashSet<>(java.util.Arrays.asList(env.trim().split("\\s*,\\s*")));
-    }
-    private static boolean fpDebug(String jobId) { return !DEBUG_JOBS.isEmpty() && DEBUG_JOBS.contains(jobId); }
-    private static String fpNewFailures(List<HardConstraint> failed, int sizeBefore) {
-        if (failed.size() <= sizeBefore) return "-";
-        StringBuilder sb = new StringBuilder();
-        for (int k = sizeBefore; k < failed.size(); k++) {
-            if (sb.length() > 0) sb.append(",");
-            sb.append(failed.get(k).getClass().getSimpleName());
-        }
-        return sb.toString();
-    }
-    // -------------------------------------------------------------------------------
-
     private final ConstraintManager constraintManager;
 
     private final SoftRouteConstraint softRouteConstraint;
@@ -199,16 +180,7 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
                     ActivityContext activityContext = new ActivityContext();
                     activityContext.setInsertionIndex(i);
                     insertionContext.setActivityContext(activityContext);
-                    int fpFailedSizeBefore = failedActivityConstraints.size();
                     ConstraintsStatus pickupShipmentConstraintStatus = fulfilled(insertionContext, prevAct, pickupShipment, nextAct, prevActEndTime, failedActivityConstraints, constraintManager);
-                    if (fpDebug(shipment.getId())) {
-                        System.err.println("[SIC-DEBUG] job=" + shipment.getId()
-                            + " PICKUP i=" + i + "/" + activitiesSize
-                            + " loc=" + locId
-                            + " prev=" + (prevAct instanceof TourActivity.JobActivity ? prevAct.getName() + "[" + ((TourActivity.JobActivity) prevAct).getJob().getId() + "]" : prevAct.getName()) + "@" + (prevAct.getLocation() != null ? prevAct.getLocation().getId() : "?")
-                            + " status=" + pickupShipmentConstraintStatus
-                            + " failed=" + fpNewFailures(failedActivityConstraints, fpFailedSizeBefore));
-                    }
 
                     if (pickupShipmentConstraintStatus.equals(ConstraintsStatus.NOT_FULFILLED)) {
                         pickupInsertionNotFulfilledBreak = false;
@@ -262,14 +234,7 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
                             ActivityContext activityContext_ = new ActivityContext();
                             activityContext_.setInsertionIndex(j);
                             insertionContext.setActivityContext(activityContext_);
-                            int fpFailedSizeBeforeD = failedActivityConstraints.size();
                             ConstraintsStatus deliverShipmentConstraintStatus = fulfilled(insertionContext, prevAct_deliveryLoop, deliverShipment, nextAct_deliveryLoop, prevActEndTime_deliveryLoop, failedActivityConstraints, constraintManager);
-                            if (fpDebug(shipment.getId())) {
-                                System.err.println("[SIC-DEBUG] job=" + shipment.getId()
-                                    + " DELIVERY i=" + i + " j=" + j + "/" + activitiesSize
-                                    + " status=" + deliverShipmentConstraintStatus
-                                    + " failed=" + fpNewFailures(failedActivityConstraints, fpFailedSizeBeforeD));
-                            }
                             if (deliverShipmentConstraintStatus.equals(ConstraintsStatus.FULFILLED)) {
                                 InsertionCostBreakdown deliveryActBreakdown = constraintManager.getActivityCostsBreakdown(
                                         insertionContext, prevAct_deliveryLoop, deliverShipment, nextAct_deliveryLoop, prevActEndTime_deliveryLoop);
@@ -318,11 +283,6 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
 
             // FIXED: Only break the position loop if NO pickup location worked for this position
             if(positionInsertionNotFulfilledBreak){
-                if (fpDebug(shipment.getId())) {
-                    System.err.println("[SIC-DEBUG] job=" + shipment.getId()
-                        + " SWEEP-ABORT at i=" + i + "/" + activitiesSize
-                        + " (all pickup locations returned NOT_FULFILLED_BREAK; positions " + (i + 1) + ".." + activitiesSize + " never evaluated)");
-                }
                 break;
             }
             //update prevAct and endTime
@@ -332,14 +292,6 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
             i++;
         }
         if (pickupInsertionIndex == InsertionData.NO_INDEX) {
-            if (fpDebug(shipment.getId())) {
-                java.util.Set<String> distinct = new java.util.LinkedHashSet<>();
-                for (HardConstraint c : failedActivityConstraints) distinct.add(c.getClass().getSimpleName());
-                System.err.println("[SIC-DEBUG] job=" + shipment.getId()
-                    + " NO-INSERTION route=" + currentRoute.getRouteId()
-                    + " routeActs=" + activitiesSize
-                    + " failedConstraints=" + distinct);
-            }
             return createNoInsertionFoundResult(failedActivityConstraints);
         }
         InsertionData insertionData = new InsertionData(bestCost, pickupInsertionIndex, deliveryInsertionIndex, newVehicle, newDriver);

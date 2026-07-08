@@ -39,23 +39,6 @@ import com.graphhopper.jsprit.core.problem.solution.route.state.RouteAndActivity
  */
 public class PickupAndDeliverShipmentLoadActivityLevelConstraint implements HardActivityConstraint {
 
-    // --- FP instrumentation (log-only, enabled via env FP_DEBUG_JOB=SO123,SO456) ---
-    private static final java.util.Set<String> DEBUG_JOBS;
-    static {
-        String env = System.getenv("FP_DEBUG_JOB");
-        if (env == null || env.trim().isEmpty()) DEBUG_JOBS = java.util.Collections.emptySet();
-        else DEBUG_JOBS = new java.util.HashSet<>(java.util.Arrays.asList(env.trim().split("\\s*,\\s*")));
-    }
-    private static boolean fpDebug(JobInsertionContext iFacts) {
-        return !DEBUG_JOBS.isEmpty() && iFacts.getJob() != null && DEBUG_JOBS.contains(iFacts.getJob().getId());
-    }
-    private static String fpActName(TourActivity act) {
-        if (act instanceof TourActivity.JobActivity) {
-            return act.getName() + "[" + ((TourActivity.JobActivity) act).getJob().getId() + "]";
-        }
-        return act.getName();
-    }
-    // -------------------------------------------------------------------------------
 
     private RouteAndActivityStateGetter stateManager;
 
@@ -92,18 +75,8 @@ public class PickupAndDeliverShipmentLoadActivityLevelConstraint implements Hard
             if (loadAtPrevAct == null) loadAtPrevAct = defaultValue;
         }
         if (isShipmentPickup(newAct)) {
-            Capacity effSize = effectivePickupSize(iFacts, newAct);
-            Capacity addUp = Capacity.addup(loadAtPrevAct, effSize);
-            boolean fits = addUp.isLessOrEqual(iFacts.getNewVehicle().getType().getCapacityDimensions());
-            if (fpDebug(iFacts)) {
-                System.err.println("[LOADC-DEBUG] job=" + iFacts.getJob().getId()
-                    + " PICKUP prev=" + fpActName(prevAct) + (prevAct instanceof Start ? "(LOAD_AT_BEGINNING)" : "")
-                    + " loadAtPrev=" + loadAtPrevAct
-                    + " effSize=" + effSize + " nominal=" + newAct.getSize()
-                    + " cap=" + iFacts.getNewVehicle().getType().getCapacityDimensions()
-                    + " verdict=" + (fits ? "OK" : "NOT_FULFILLED"));
-            }
-            if (!fits) {
+            Capacity addUp = Capacity.addup(loadAtPrevAct, effectivePickupSize(iFacts, newAct));
+            if (!addUp.isLessOrEqual(iFacts.getNewVehicle().getType().getCapacityDimensions())) {
                 return ConstraintsStatus.NOT_FULFILLED;
             }
         }
@@ -124,17 +97,7 @@ public class PickupAndDeliverShipmentLoadActivityLevelConstraint implements Hard
                 }
             }
             Capacity addUp = Capacity.addup(loadAtPrevAct, inFlightPickup);
-            boolean fits = addUp.isLessOrEqual(iFacts.getNewVehicle().getType().getCapacityDimensions());
-            if (fpDebug(iFacts)) {
-                System.err.println("[LOADC-DEBUG] job=" + iFacts.getJob().getId()
-                    + " DELIVERY prev=" + fpActName(prevAct) + (prevAct instanceof Start ? "(LOAD_AT_BEGINNING)" : "")
-                    + " loadAtPrev=" + loadAtPrevAct
-                    + " inFlightPickup=" + inFlightPickup
-                    + " deliverNominal=" + newAct.getSize()
-                    + " cap=" + iFacts.getNewVehicle().getType().getCapacityDimensions()
-                    + " verdict=" + (fits ? "OK" : "NOT_FULFILLED_BREAK"));
-            }
-            if (!fits)
+            if (!addUp.isLessOrEqual(iFacts.getNewVehicle().getType().getCapacityDimensions()))
                 return ConstraintsStatus.NOT_FULFILLED_BREAK;
         }
         return ConstraintsStatus.FULFILLED;
