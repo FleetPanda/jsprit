@@ -103,6 +103,10 @@ class InsertionDataUpdater {
                             InsertionData newData = new InsertionData(oldData.getInsertionCost(), oldData.getPickupInsertionIndex(),
                                 oldData.getDeliveryInsertionIndex(), available, oldData.getSelectedDriver());
                             newData.setVehicleDepartureTime(oldData.getVehicleDepartureTime());
+                            // Multi-pickup: propagate the chosen pickup location — dropping it
+                            // here makes the Inserter silently fall back to the activity's
+                            // default (first) location.
+                            newData.setSelectedPickupLocation(oldData.getSelectedPickupLocation());
                             for(Event e : oldData.getEvents()){
                                 if(e instanceof SwitchVehicle){
                                     newData.getEvents().add(new SwitchVehicle(versionedIData.getRoute(),available,oldData.getVehicleDepartureTime()));
@@ -508,6 +512,8 @@ class InsertionDataUpdater {
         InsertionData newData = new InsertionData(oldData.getInsertionCost(), oldData.getPickupInsertionIndex(),
                 oldData.getDeliveryInsertionIndex(), newVehicle, oldData.getSelectedDriver());
         newData.setVehicleDepartureTime(oldData.getVehicleDepartureTime());
+        // Multi-pickup: propagate the chosen pickup location (see sibling copy sites).
+        newData.setSelectedPickupLocation(oldData.getSelectedPickupLocation());
         for (Event e : oldData.getEvents()) {
             if (e instanceof SwitchVehicle) {
                 newData.getEvents().add(new SwitchVehicle(route, newVehicle, oldData.getVehicleDepartureTime()));
@@ -566,6 +572,8 @@ class InsertionDataUpdater {
                             InsertionData newData = new InsertionData(oldData.getInsertionCost(), oldData.getPickupInsertionIndex(),
                                     oldData.getDeliveryInsertionIndex(), available, oldData.getSelectedDriver());
                             newData.setVehicleDepartureTime(oldData.getVehicleDepartureTime());
+                            // Multi-pickup: propagate the chosen pickup location (see sibling copy sites).
+                            newData.setSelectedPickupLocation(oldData.getSelectedPickupLocation());
                             for (Event e : oldData.getEvents()) {
                                 if (e instanceof SwitchVehicle) {
                                     newData.getEvents().add(new SwitchVehicle(versionedIData.getRoute(), available, oldData.getVehicleDepartureTime()));

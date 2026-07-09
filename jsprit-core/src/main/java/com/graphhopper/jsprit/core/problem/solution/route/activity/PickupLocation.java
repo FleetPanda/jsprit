@@ -65,7 +65,15 @@ public class PickupLocation {
 
         /**
          * Marks this pickup as coming from the vehicle's initial inventory.
-         * The ShipmentInsertionCalculatorFlex will treat its transport cost as zero.
+         *
+         * <p>Semantics: eligibility (which vehicle may use this option, inventory
+         * coverage) is governed by the private project's constraints, which read
+         * this flag via {@code getSelectedPickupLocation().isOnVehicle()}. Transport
+         * cost is NOT special-cased: the option is costed at its location's
+         * coordinates (the owning vehicle's start depot), which yields a zero-cost
+         * detour when inserted at the start of the route — the position such
+         * pickups naturally take. True zero-travel semantics (free at any route
+         * position) are not implemented.
          */
         public PickupLocation.Builder setOnVehicle(boolean onVehicle) {
             this.onVehicle = onVehicle;

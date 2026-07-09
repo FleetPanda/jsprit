@@ -159,6 +159,14 @@ public final class ShipmentInsertionCalculatorFlex extends AbstractInsertionCalc
 
                 boolean pickupInsertionNotFulfilledBreak = true;
                 for(PickupLocation pickupLocation : shipment.getPickupLocations()) {
+                    // Apply the location under evaluation to this activity COPY so
+                    // constraints and costs (which read pickupShipment.getLocation())
+                    // evaluate THIS option, not the shipment's first/last-selected one.
+                    // Mirrors ShipmentInsertionCalculator; without it every option is
+                    // costed as if it were the fallback location.
+                    if (pickupShipment instanceof PickupShipment) {
+                        ((PickupShipment) pickupShipment).setSelectedPickupLocation(pickupLocation);
+                    }
                     for (TimeWindow pickupTimeWindow : pickupLocation.getPickupTimeWindows()) {
                         pickupShipment.setTheoreticalEarliestOperationStartTime(pickupTimeWindow.getStart());
                         pickupShipment.setTheoreticalLatestOperationStartTime(pickupTimeWindow.getEnd());

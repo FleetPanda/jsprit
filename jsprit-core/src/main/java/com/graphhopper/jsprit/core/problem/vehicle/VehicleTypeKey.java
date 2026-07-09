@@ -18,6 +18,7 @@
 package com.graphhopper.jsprit.core.problem.vehicle;
 
 import com.graphhopper.jsprit.core.problem.AbstractVehicle;
+import com.graphhopper.jsprit.core.problem.Capacity;
 import com.graphhopper.jsprit.core.problem.Skills;
 
 /**
@@ -36,9 +37,22 @@ public class VehicleTypeKey extends AbstractVehicle.AbstractTypeKey {
     public final double latestEnd;
     public final Skills skills;
     public final boolean returnToDepot;
+    /**
+     * Part of the vehicle's identity: vehicles with different initial (on-board)
+     * inventory are NOT interchangeable — LOAD_AT_BEGINNING differs, so capacity
+     * feasibility evaluated on one does not transfer to the other. Excluding this
+     * from the key lets VehicleFleetManager (and the locked-vehicle switch in
+     * InsertionDataUpdater) silently swap a loaded vehicle for an empty one.
+     * May be null (no initial load).
+     */
+    public final Capacity initialLoad;
     private final int cachedHashCode;
 
     public VehicleTypeKey(String typeId, String startLocationId, String endLocationId, double earliestStart, double latestEnd, Skills skills, boolean returnToDepot) {
+        this(typeId, startLocationId, endLocationId, earliestStart, latestEnd, skills, returnToDepot, null);
+    }
+
+    public VehicleTypeKey(String typeId, String startLocationId, String endLocationId, double earliestStart, double latestEnd, Skills skills, boolean returnToDepot, Capacity initialLoad) {
         super();
         this.type = typeId;
         this.startLocationId = startLocationId;
@@ -47,6 +61,7 @@ public class VehicleTypeKey extends AbstractVehicle.AbstractTypeKey {
         this.latestEnd = latestEnd;
         this.skills = skills;
         this.returnToDepot = returnToDepot;
+        this.initialLoad = initialLoad;
         this.cachedHashCode = computeHashCode();
     }
 
@@ -67,6 +82,7 @@ public class VehicleTypeKey extends AbstractVehicle.AbstractTypeKey {
         if (!skills.equals(that.skills)) return false;
         if (!startLocationId.equals(that.startLocationId)) return false;
         if (!type.equals(that.type)) return false;
+        if (!java.util.Objects.equals(initialLoad, that.initialLoad)) return false;
 
         return true;
     }
@@ -88,6 +104,7 @@ public class VehicleTypeKey extends AbstractVehicle.AbstractTypeKey {
         result = 31 * result + (int) (temp ^ (temp >>> 32));
         result = 31 * result + (skills != null ? skills.hashCode() : 0);
         result = 31 * result + (returnToDepot ? 1 : 0);
+        result = 31 * result + (initialLoad != null ? initialLoad.hashCode() : 0);
         return result;
     }
 
