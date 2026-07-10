@@ -113,6 +113,16 @@ class Inserter {
                         setEndLocation(route, (Shipment) job);
                     }
                 }
+                // Apply the pickup location chosen during insertion evaluation onto this
+                // activity copy. Done here (not on the Shipment) to avoid mutating shared
+                // job state that is evaluated concurrently across threads.
+                // We also update the Shipment after insertion is committed — this is safe
+                // because the Inserter runs single-threaded after the decision is made,
+                // and AffectedJobTracker/AdaptiveSpatialFilter need it during ruin.
+                if (iData.getSelectedPickupLocation() != null && pickupShipment instanceof PickupShipment) {
+                    ((PickupShipment) pickupShipment).setSelectedPickupLocation(iData.getSelectedPickupLocation());
+                    ((Shipment) job).setSelectedPickupLocation(iData.getSelectedPickupLocation());
+                }
                 route.getTourActivities().addActivity(iData.getDeliveryInsertionIndex(), deliverShipment);
                 route.getTourActivities().addActivity(iData.getPickupInsertionIndex(), pickupShipment);
             } else delegator.handleJobInsertion(job, iData, route);

@@ -18,6 +18,7 @@
 package com.graphhopper.jsprit.core.problem.vehicle;
 
 import com.graphhopper.jsprit.core.problem.AbstractVehicle;
+import com.graphhopper.jsprit.core.problem.Capacity;
 import com.graphhopper.jsprit.core.problem.Location;
 import com.graphhopper.jsprit.core.problem.Skills;
 import com.graphhopper.jsprit.core.problem.job.Break;
@@ -126,6 +127,14 @@ public class VehicleImpl extends AbstractVehicle {
         private Break aBreak;
 
         private Object userData;
+
+        /**
+         * Initial load already on the vehicle at route start.
+         * Represents pre-loaded inventory that does not require a pickup activity.
+         * Added to LOAD_AT_BEGINNING by UpdateLoads so all capacity constraints
+         * and load tracking see it automatically.
+         */
+        private Capacity initialLoad = null;
 
         private Builder(String id) {
             super();
@@ -321,6 +330,19 @@ public class VehicleImpl extends AbstractVehicle {
             this.aBreak = aBreak;
             return this;
         }
+
+        /**
+         * Sets the initial load already on the vehicle at route start.
+         * This represents pre-loaded inventory (initial inventory) that does not
+         * require a pickup activity — the product is already in the compartments.
+         *
+         * @param initialLoad capacity representing the pre-loaded product
+         * @return this builder
+         */
+        public Builder setInitialLoad(Capacity initialLoad) {
+            this.initialLoad = initialLoad;
+            return this;
+        }
     }
 
     /**
@@ -362,6 +384,12 @@ public class VehicleImpl extends AbstractVehicle {
 
     private final Break aBreak;
 
+    /**
+     * Initial load pre-loaded on this vehicle at route start.
+     * Null means no initial inventory.
+     */
+    private final Capacity initialLoad;
+
     private VehicleImpl(Builder builder) {
         setUserData(builder.userData);
         id = builder.id;
@@ -373,8 +401,8 @@ public class VehicleImpl extends AbstractVehicle {
         endLocation = builder.endLocation;
         startLocation = builder.startLocation;
         aBreak = builder.aBreak;
-        //        setVehicleIdentifier(new VehicleTypeKey(type.getTypeId(),startLocation.getId(),endLocation.getId(),earliestDeparture,latestArrival,skills));
-        setVehicleIdentifier(new VehicleTypeKey(type.getTypeId(), startLocation.getId(), endLocation.getId(), earliestDeparture, latestArrival, skills, returnToDepot));
+        initialLoad = builder.initialLoad;
+        setVehicleIdentifier(new VehicleTypeKey(type.getTypeId(), startLocation.getId(), endLocation.getId(), earliestDeparture, latestArrival, skills, returnToDepot, initialLoad));
     }
 
     /**
@@ -438,6 +466,11 @@ public class VehicleImpl extends AbstractVehicle {
         return aBreak;
     }
 
+    @Override
+    public Capacity getInitialLoad() {
+        return initialLoad;
+    }
+
     /* (non-Javadoc)
      * @see java.lang.Object#hashCode()
      */
@@ -476,4 +509,3 @@ public class VehicleImpl extends AbstractVehicle {
     }
 
 }
-

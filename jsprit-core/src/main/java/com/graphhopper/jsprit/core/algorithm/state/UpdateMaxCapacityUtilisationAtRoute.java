@@ -60,8 +60,30 @@ class UpdateMaxCapacityUtilisationAtRoute implements ActivityVisitor, StateUpdat
 
     @Override
     public void visit(TourActivity act) {
-        currentLoad = Capacity.addup(currentLoad, act.getSize());
+        currentLoad = Capacity.addup(currentLoad, effectiveSize(act));
         maxLoad = Capacity.max(maxLoad, currentLoad);
+    }
+
+    /**
+     * Effective size for load accumulation — consults MinLoadAdjustmentProvider
+     * (unified minLoad + initial-inventory adjustments from the private project).
+     * Mirrors UpdateLoads.effectiveSize to keep MAXLOAD consistent with LOAD.
+     */
+    private Capacity effectiveSize(TourActivity act) {
+        Capacity original = act.getSize();
+        if (route == null || !(act instanceof TourActivity.JobActivity)) return original;
+        if (!(act instanceof com.graphhopper.jsprit.core.problem.solution.route.activity.PickupActivity)) return original;
+        MinLoadAdjustmentProvider provider = stateManager.getMinLoadAdjustmentProvider();
+        if (provider == null) return original;
+        String jobId = ((TourActivity.JobActivity) act).getJob().getId();
+        int adjustedDim0 = provider.getAdjustedSize(route.getRouteId(), route.getVehicle().getId(), jobId);
+        if (adjustedDim0 < 0) return original;
+        Capacity.Builder builder = Capacity.Builder.newInstance();
+        builder.addDimension(0, adjustedDim0);
+        for (int i = 1; i < original.getNuOfDimensions(); i++) {
+            builder.addDimension(i, original.get(i));
+        }
+        return builder.build();
     }
 
     @Override

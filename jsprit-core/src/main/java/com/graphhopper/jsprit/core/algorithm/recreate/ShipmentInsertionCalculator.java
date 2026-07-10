@@ -168,7 +168,11 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
                         pickupLocation.getLocation().getId() : "unknown";
                 // FIXED: Reset pickupInsertionNotFulfilledBreak for EACH pickup location
                 boolean pickupInsertionNotFulfilledBreak = true;
-                shipment.setSelectedPickupLocation(pickupLocation);
+                // Set location on the activity instance, not on the shared Shipment,
+                // to avoid concurrent mutation across threads.
+                if (pickupShipment instanceof PickupShipment) {
+                    ((PickupShipment) pickupShipment).setSelectedPickupLocation(pickupLocation);
+                }
 
                 for(TimeWindow pickupTimeWindow : pickupLocation.getPickupTimeWindows()) {
                     pickupShipment.setTheoreticalEarliestOperationStartTime(pickupTimeWindow.getStart());
@@ -294,13 +298,19 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
         insertionData.setCostBreakdown(bestBreakdown);
         pickupShipment.setTheoreticalEarliestOperationStartTime(bestPickupTimeWindow.getStart());
         pickupShipment.setTheoreticalLatestOperationStartTime(bestPickupTimeWindow.getEnd());
-        shipment.setSelectedPickupLocation(bestPickupLocation);
+        // Store in InsertionData instead of mutating the shared Shipment
+        insertionData.setSelectedPickupLocation(bestPickupLocation);
+        // CRITICAL: the shared evaluation activity carries the LAST tested location
+        // (depot is last in the array). The Inserter's correction branch is not part
+        // of every event flow, so apply the WINNING location to the activity that
+        // will be referenced by this InsertionData's events.
+        if (pickupShipment instanceof PickupShipment) {
+            ((PickupShipment) pickupShipment).setSelectedPickupLocation(bestPickupLocation);
+        }
         deliverShipment.setTheoreticalEarliestOperationStartTime(bestDeliveryTimeWindow.getStart());
         deliverShipment.setTheoreticalLatestOperationStartTime(bestDeliveryTimeWindow.getEnd());
         insertionData.setVehicleDepartureTime(newVehicleDepartureTime);
         addActivitiesAndVehicleSwitch(insertionData, currentRoute, newVehicle, pickupShipment, pickupInsertionIndex, deliverShipment, deliveryInsertionIndex, newVehicleDepartureTime);
-        String bestLocId = bestPickupLocation != null && bestPickupLocation.getLocation().getId() != null ?
-                bestPickupLocation.getLocation().getId() : "unknown";
         return insertionData;
     }
 
@@ -374,6 +384,12 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
                 for (TimeWindow pickupTimeWindow : pickupLocation.getPickupTimeWindows()) {
                     pickupShipment.setTheoreticalEarliestOperationStartTime(pickupTimeWindow.getStart());
                     pickupShipment.setTheoreticalLatestOperationStartTime(pickupTimeWindow.getEnd());
+                    // Set the location under test BEFORE constraint evaluation so
+                    // HardActivityConstraints see exactly which pickup option this is
+                    // (e.g. depot/onVehicle governance). Mirrors getInsertionData's path.
+                    if (pickupShipment instanceof PickupShipment) {
+                        ((PickupShipment) pickupShipment).setSelectedPickupLocation(pickupLocation);
+                    }
                     ActivityContext activityContext = new ActivityContext();
                     activityContext.setInsertionIndex(i);
                     insertionContext.setActivityContext(activityContext);
@@ -465,8 +481,11 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
                                 deliveryForPosition.setTheoreticalEarliestOperationStartTime(deliveryTimeWindow.getStart());
                                 deliveryForPosition.setTheoreticalLatestOperationStartTime(deliveryTimeWindow.getEnd());
 
-                                // FIXED: Set the selected pickup location for this position
-                                shipment.setSelectedPickupLocation(pickupLocation);
+                                // Set on the activity instance and on InsertionData — not on the shared Shipment
+                                if (pickupForPosition instanceof PickupShipment) {
+                                    ((PickupShipment) pickupForPosition).setSelectedPickupLocation(pickupLocation);
+                                }
+                                insertionData.setSelectedPickupLocation(pickupLocation);
 
                                 insertionData.setVehicleDepartureTime(newVehicleDepartureTime);
                                 addActivitiesAndVehicleSwitch(insertionData, currentRoute, newVehicle,

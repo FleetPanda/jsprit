@@ -20,11 +20,14 @@ package com.graphhopper.jsprit.core.algorithm.state;
 import com.graphhopper.jsprit.core.algorithm.recreate.InsertionData;
 import com.graphhopper.jsprit.core.algorithm.recreate.listener.InsertionStartsListener;
 import com.graphhopper.jsprit.core.algorithm.recreate.listener.JobInsertedListener;
+import com.graphhopper.jsprit.core.algorithm.state.MinLoadAdjustmentProvider;
 import com.graphhopper.jsprit.core.problem.Capacity;
 import com.graphhopper.jsprit.core.problem.job.Job;
 import com.graphhopper.jsprit.core.problem.solution.route.VehicleRoute;
 import com.graphhopper.jsprit.core.problem.solution.route.activity.ActivityVisitor;
+import com.graphhopper.jsprit.core.problem.solution.route.activity.PickupActivity;
 import com.graphhopper.jsprit.core.problem.solution.route.activity.TourActivity;
+import com.graphhopper.jsprit.core.problem.solution.route.activity.TourActivity.JobActivity;
 
 import java.util.Collection;
 
@@ -48,6 +51,8 @@ class UpdateLoads implements ActivityVisitor, StateUpdater, InsertionStartsListe
      */
     private Capacity currentLoad;
 
+    private VehicleRoute currentRoute;
+
     private Capacity defaultValue;
 
     public UpdateLoads(StateManager stateManager) {
@@ -58,14 +63,35 @@ class UpdateLoads implements ActivityVisitor, StateUpdater, InsertionStartsListe
 
     @Override
     public void begin(VehicleRoute route) {
+        currentRoute = route;
         currentLoad = stateManager.getRouteState(route, InternalStates.LOAD_AT_BEGINNING, Capacity.class);
         if (currentLoad == null) currentLoad = defaultValue;
     }
 
     @Override
     public void visit(TourActivity act) {
-        currentLoad = Capacity.addup(currentLoad, act.getSize());
+        Capacity size = effectiveSize(act);
+        currentLoad = Capacity.addup(currentLoad, size);
         stateManager.putInternalTypedActivityState(act, InternalStates.LOAD, currentLoad);
+    }
+
+
+    private Capacity effectiveSize(TourActivity act) {
+        Capacity original = act.getSize();
+        if (currentRoute == null || !(act instanceof TourActivity.JobActivity)) return original;
+        // Only apply minLoad adjustment to pickup activities
+        if (!(act instanceof com.graphhopper.jsprit.core.problem.solution.route.activity.PickupActivity)) return original;
+        MinLoadAdjustmentProvider provider = stateManager.getMinLoadAdjustmentProvider();
+        if (provider == null) return original;
+        String jobId = ((TourActivity.JobActivity) act).getJob().getId();
+        int adjustedDim0 = provider.getAdjustedSize(currentRoute.getRouteId(), currentRoute.getVehicle().getId(), jobId);
+        if (adjustedDim0 < 0) return original;
+        Capacity.Builder builder = Capacity.Builder.newInstance();
+        builder.addDimension(0, adjustedDim0);
+        for (int i = 1; i < original.getNuOfDimensions(); i++) {
+            builder.addDimension(i, original.get(i));
+        }
+        return builder.build();
     }
 
     @Override
@@ -83,6 +109,12 @@ class UpdateLoads implements ActivityVisitor, StateUpdater, InsertionStartsListe
             if (j.isDeliveredToVehicleEnd()) {
                 loadAtEnd = Capacity.addup(loadAtEnd, j.getSize());
             }
+        }
+        // Add vehicle's initial inventory to LOAD_AT_BEGINNING — product already loaded,
+        // no pickup activity needed. Constraints and load tracking see it automatically.
+        com.graphhopper.jsprit.core.problem.Capacity vehicleInitialLoad = route.getVehicle().getInitialLoad();
+        if (vehicleInitialLoad != null) {
+            loadAtDepot = Capacity.addup(loadAtDepot, vehicleInitialLoad);
         }
         stateManager.putTypedInternalRouteState(route, InternalStates.LOAD_AT_BEGINNING, loadAtDepot);
         stateManager.putTypedInternalRouteState(route, InternalStates.LOAD_AT_END, loadAtEnd);

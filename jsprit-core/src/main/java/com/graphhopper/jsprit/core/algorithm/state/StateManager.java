@@ -91,6 +91,14 @@ public class StateManager implements RouteAndActivityStateGetter, IterationStart
 
     private final boolean isIndexedBased;
 
+    /**
+     * Optional provider for minimum loading size adjustments.
+     * Set by the private project via setMinLoadAdjustmentProvider().
+     * Read by UpdateLoads to apply adjustments without coupling the fork
+     * to private business logic.
+     */
+    private MinLoadAdjustmentProvider minLoadAdjustmentProvider;
+
     int getMaxIndexOfVehicleTypeIdentifiers() {
         return nuVehicleTypeKeys;
     }
@@ -225,6 +233,22 @@ public class StateManager implements RouteAndActivityStateGetter, IterationStart
             vehicleDependentRouteStateMap.clear();
         }
         Arrays.fill(problemStates, null);
+    }
+
+    /**
+     * Registers a provider for minimum loading size adjustments.
+     * Called by the private project after creating the MinLoadStateUpdater.
+     */
+    public void setMinLoadAdjustmentProvider(MinLoadAdjustmentProvider provider) {
+        this.minLoadAdjustmentProvider = provider;
+    }
+
+    /**
+     * Returns the registered MinLoadAdjustmentProvider, or null if none was set.
+     * Called by UpdateLoads to look up per-route size adjustments.
+     */
+    public MinLoadAdjustmentProvider getMinLoadAdjustmentProvider() {
+        return minLoadAdjustmentProvider;
     }
 
     private void fill_threeDimArr(Object[][][] states, Object o) {

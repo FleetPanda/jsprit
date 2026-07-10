@@ -17,6 +17,13 @@ public class PickupLocation {
     private TimeWindowsImpl pickupTimeWindows;
 
     /**
+     * When true, this pickup location represents product already on the vehicle
+     * (initial inventory). No physical pickup activity is needed — the product
+     * is already loaded. Transport cost is zero regardless of route position.
+     */
+    private boolean onVehicle = false;
+
+    /**
      * Constructs the PickupLocation
      *
      * @param location
@@ -37,6 +44,12 @@ public class PickupLocation {
 
         private TimeWindowsImpl timeWindows;
 
+        /**
+         * When true, this pickup represents product already on the vehicle.
+         * No physical activity, zero transport cost.
+         */
+        private boolean onVehicle = false;
+
         public Builder() {
             this.timeWindows = new TimeWindowsImpl();
         }
@@ -45,9 +58,25 @@ public class PickupLocation {
             return new PickupLocation.Builder();
         }
 
-
         public PickupLocation.Builder setLocation(Location location) {
             this.location = location;
+            return this;
+        }
+
+        /**
+         * Marks this pickup as coming from the vehicle's initial inventory.
+         *
+         * <p>Semantics: eligibility (which vehicle may use this option, inventory
+         * coverage) is governed by the private project's constraints, which read
+         * this flag via {@code getSelectedPickupLocation().isOnVehicle()}. Transport
+         * cost is NOT special-cased: the option is costed at its location's
+         * coordinates (the owning vehicle's start depot), which yields a zero-cost
+         * detour when inserted at the start of the route — the position such
+         * pickups naturally take. True zero-travel semantics (free at any route
+         * position) are not implemented.
+         */
+        public PickupLocation.Builder setOnVehicle(boolean onVehicle) {
+            this.onVehicle = onVehicle;
             return this;
         }
 
@@ -73,6 +102,7 @@ public class PickupLocation {
 
     private PickupLocation(PickupLocation.Builder builder) {
         this.pickupLocation_ = builder.location;
+        this.onVehicle = builder.onVehicle;
         this.pickupTimeWindows = builder.timeWindows;
         if (this.pickupTimeWindows == null) {
             this.pickupTimeWindows = new TimeWindowsImpl();
@@ -80,6 +110,10 @@ public class PickupLocation {
         if (this.pickupTimeWindows.getTimeWindows().size() == 0) {
             this.pickupTimeWindows.add(TimeWindow.newInstance(0.0, Double.MAX_VALUE));
         }
+    }
+
+    public boolean isOnVehicle() {
+        return onVehicle;
     }
 
     /**

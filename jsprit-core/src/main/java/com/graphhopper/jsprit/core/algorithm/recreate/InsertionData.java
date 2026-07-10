@@ -19,6 +19,7 @@ package com.graphhopper.jsprit.core.algorithm.recreate;
 
 import com.graphhopper.jsprit.core.problem.driver.Driver;
 import com.graphhopper.jsprit.core.problem.vehicle.Vehicle;
+import com.graphhopper.jsprit.core.problem.solution.route.activity.PickupLocation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -85,6 +86,15 @@ public class InsertionData {
     private double additionalTime;
 
     private InsertionCostBreakdown costBreakdown;
+
+    /**
+     * The pickup location chosen by ShipmentInsertionCalculatorFlex when the shipment
+     * has multiple pickup options. Stored here (not on the Shipment) to avoid mutating
+     * shared job state during concurrent insertion evaluation across threads.
+     *
+     * Null for single-pickup shipments or when using the standard calculator.
+     */
+    private PickupLocation selectedPickupLocation;
 
     private List<Event> events = new ArrayList<Event>();
 
@@ -206,5 +216,20 @@ public class InsertionData {
         this.costBreakdown = costBreakdown;
     }
 
+    /**
+     * Returns the pickup location selected during multi-pickup insertion evaluation.
+     * Null for single-pickup shipments.
+     */
+    public PickupLocation getSelectedPickupLocation() {
+        return selectedPickupLocation;
+    }
+
+    /**
+     * Sets the pickup location chosen by the insertion calculator.
+     * Called by ShipmentInsertionCalculatorFlex — never by Shipment directly.
+     */
+    public void setSelectedPickupLocation(PickupLocation selectedPickupLocation) {
+        this.selectedPickupLocation = selectedPickupLocation;
+    }
 
 }

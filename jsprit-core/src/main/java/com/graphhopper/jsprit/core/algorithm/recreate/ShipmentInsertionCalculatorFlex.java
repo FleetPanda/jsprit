@@ -129,6 +129,7 @@ public final class ShipmentInsertionCalculatorFlex extends AbstractInsertionCalc
 
         TimeWindow bestPickupTimeWindow = null;
         TimeWindow bestDeliveryTimeWindow = null;
+        PickupLocation bestPickupLocation = null;
 
 
         Start start = new Start(newVehicle.getStartLocation(), newVehicle.getEarliestDeparture(), newVehicle.getLatestArrival());
@@ -158,6 +159,14 @@ public final class ShipmentInsertionCalculatorFlex extends AbstractInsertionCalc
 
                 boolean pickupInsertionNotFulfilledBreak = true;
                 for(PickupLocation pickupLocation : shipment.getPickupLocations()) {
+                    // Apply the location under evaluation to this activity COPY so
+                    // constraints and costs (which read pickupShipment.getLocation())
+                    // evaluate THIS option, not the shipment's first/last-selected one.
+                    // Mirrors ShipmentInsertionCalculator; without it every option is
+                    // costed as if it were the fallback location.
+                    if (pickupShipment instanceof PickupShipment) {
+                        ((PickupShipment) pickupShipment).setSelectedPickupLocation(pickupLocation);
+                    }
                     for (TimeWindow pickupTimeWindow : pickupLocation.getPickupTimeWindows()) {
                         pickupShipment.setTheoreticalEarliestOperationStartTime(pickupTimeWindow.getStart());
                         pickupShipment.setTheoreticalLatestOperationStartTime(pickupTimeWindow.getEnd());
@@ -227,6 +236,7 @@ public final class ShipmentInsertionCalculatorFlex extends AbstractInsertionCalc
                                             deliveryInsertionIndex = j;
                                             bestPickupTimeWindow = pickupTimeWindow;
                                             bestDeliveryTimeWindow = deliveryTimeWindow;
+                                            bestPickupLocation = pickupLocation;
                                         }
                                         deliveryInsertionNotFulfilledBreak = false;
                                     } else if (deliverShipmentConstraintStatus.equals(ConstraintsStatus.NOT_FULFILLED)) {
@@ -271,6 +281,9 @@ public final class ShipmentInsertionCalculatorFlex extends AbstractInsertionCalc
         deliverShipment.setTheoreticalEarliestOperationStartTime(bestDeliveryTimeWindow.getStart());
         deliverShipment.setTheoreticalLatestOperationStartTime(bestDeliveryTimeWindow.getEnd());
         insertionData.setVehicleDepartureTime(newVehicleDepartureTime);
+        // Persist the chosen pickup location in InsertionData — not on the Shipment — to
+        // avoid mutating shared job state during concurrent multi-thread evaluation.
+        insertionData.setSelectedPickupLocation(bestPickupLocation);
         insertionData.getEvents().add(new InsertActivity(currentRoute, newVehicle, deliverShipment, deliveryInsertionIndex));
         insertionData.getEvents().add(new InsertActivity(currentRoute, newVehicle, pickupShipment, pickupInsertionIndex));
         insertionData.getEvents().add(new SwitchVehicle(currentRoute, newVehicle, newVehicleDepartureTime));
