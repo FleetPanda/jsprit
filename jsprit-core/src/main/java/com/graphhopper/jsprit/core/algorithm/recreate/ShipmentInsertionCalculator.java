@@ -20,6 +20,7 @@ package com.graphhopper.jsprit.core.algorithm.recreate;
 import com.graphhopper.jsprit.core.problem.JobActivityFactory;
 import com.graphhopper.jsprit.core.problem.Location;
 import com.graphhopper.jsprit.core.problem.constraint.ConstraintManager;
+import com.graphhopper.jsprit.core.problem.constraint.RoutePackingValidator;
 import com.graphhopper.jsprit.core.problem.constraint.HardActivityConstraint.ConstraintsStatus;
 import com.graphhopper.jsprit.core.problem.constraint.HardConstraint;
 import com.graphhopper.jsprit.core.problem.constraint.SoftActivityConstraint;
@@ -243,7 +244,8 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
                                 double totalActivityInsertionCosts = pickupAIC + deliveryAIC
                                         + additionalICostsAtRouteLevel + additionalPickupICosts + additionalDeliveryICosts;
 
-                                if (totalActivityInsertionCosts < bestCost) {
+                                if (totalActivityInsertionCosts < bestCost
+                                        && packingFeasible(currentRoute, pickupShipment, i, deliverShipment, j, newVehicle)) {
                                     bestCost = totalActivityInsertionCosts;
                                     pickupInsertionIndex = i;
                                     deliveryInsertionIndex = j;
@@ -491,7 +493,12 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
                                 addActivitiesAndVehicleSwitch(insertionData, currentRoute, newVehicle,
                                         pickupForPosition, i, deliveryForPosition, j, newVehicleDepartureTime);
 
-                                allPositions.add(insertionData);
+                                // Same whole-route packing guarantee as getInsertionData: only offer
+                                // this (pickup i, delivery j) position to the (fast-)regret selector if
+                                // the resulting sequence actually packs. No validator => native behavior.
+                                if (packingFeasible(currentRoute, pickupForPosition, i, deliveryForPosition, j, newVehicle)) {
+                                    allPositions.add(insertionData);
+                                }
                                 deliveryInsertionNotFulfilledBreak = false;
                             } else if (deliveryStatus.equals(ConstraintsStatus.NOT_FULFILLED)) {
                                 deliveryInsertionNotFulfilledBreak = false;
@@ -532,4 +539,30 @@ final class ShipmentInsertionCalculator extends AbstractInsertionCalculator {
 
         return allPositions;
     }
+
+    /**
+     * Opt-in whole-route packing check. Returns true (feasible) when no validator is registered, so
+     * problems without this feature run exactly as stock jsprit with zero extra work. When a
+     * validator is present, builds the candidate activity sequence (current activities with the
+     * shipment's pickup spliced in at pickupIndex and its delivery at deliveryIndex) and asks the
+     * validator whether that exact sequence packs.
+     */
+    private boolean packingFeasible(VehicleRoute currentRoute, TourActivity pickupAct, int pickupIndex,
+                                    TourActivity deliveryAct, int deliveryIndex, Vehicle newVehicle) {
+        RoutePackingValidator validator = constraintManager.getPackingValidator();
+        if (validator == null) return true; // native path, no overhead
+
+        List<TourActivity> existing = currentRoute.getTourActivities().getActivities();
+        List<TourActivity> candidate = new ArrayList<>(existing.size() + 2);
+        // Insertion indices are relative to the ORIGINAL activity list. Delivery index >= pickup
+        // index by construction (delivery loop starts at j = i). Splice pickup first, then delivery,
+        // accounting for the shift the pickup introduces.
+        for (int k = 0; k <= existing.size(); k++) {
+            if (k == pickupIndex) candidate.add(pickupAct);
+            if (k == deliveryIndex) candidate.add(deliveryAct);
+            if (k < existing.size()) candidate.add(existing.get(k));
+        }
+        return validator.isPackable(newVehicle, candidate);
+    }
+
 }
