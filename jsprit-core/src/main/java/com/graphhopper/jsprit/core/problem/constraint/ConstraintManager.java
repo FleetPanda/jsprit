@@ -63,6 +63,8 @@ public class ConstraintManager implements HardActivityConstraint, HardRouteConst
 
     private boolean skillconstraintSet = false;
 
+    private boolean vehicleRestrictionConstraintsSet = false;
+
     private final DependencyType[] dependencyTypes;
 
     public ConstraintManager(VehicleRoutingProblem vrp, RouteAndActivityStateGetter stateManager) {
@@ -167,6 +169,33 @@ public class ConstraintManager implements HardActivityConstraint, HardRouteConst
         if (!skillconstraintSet) {
             addConstraint(new HardSkillConstraint(stateManager));
             skillconstraintSet = true;
+        }
+    }
+
+    /**
+     * Adds vehicle restriction constraints (allowed/disallowed/preferred vehicles).
+     * The hard constraint enforces allowed and disallowed vehicle lists.
+     * The soft constraint penalizes or rewards based on preferred vehicle definitions.
+     */
+    public void addVehicleRestrictionConstraints() {
+        if (!vehicleRestrictionConstraintsSet) {
+            addConstraint(new HardVehicleRestrictionConstraint());
+            addConstraint(new SoftPreferredVehicleConstraint());
+            vehicleRestrictionConstraintsSet = true;
+        }
+    }
+
+    /**
+     * Adds vehicle restriction constraints with custom penalty and bonus values.
+     *
+     * @param penaltyForNonPreferred penalty cost when a non-preferred vehicle is used
+     * @param maxBonus               maximum bonus for priority-1 preferred vehicle
+     */
+    public void addVehicleRestrictionConstraints(double penaltyForNonPreferred, double maxBonus) {
+        if (!vehicleRestrictionConstraintsSet) {
+            addConstraint(new HardVehicleRestrictionConstraint());
+            addConstraint(new SoftPreferredVehicleConstraint(penaltyForNonPreferred, maxBonus));
+            vehicleRestrictionConstraintsSet = true;
         }
     }
 

@@ -69,6 +69,7 @@ public class UnassignedJobReasonTracker implements JobUnassignedListener {
         failedConstraintNamesToCode.put("PickupAndDeliverShipmentLoadActivityLevelConstraint", 3);
         failedConstraintNamesToCode.put("ServiceLoadActivityLevelConstraint", 3);
         failedConstraintNamesToCode.put("MaxDistanceConstraint", 4);
+        failedConstraintNamesToCode.put("HardVehicleRestrictionConstraint", 5);
     }
 
     public void ignore(String simpleNameOfConstraint) {
