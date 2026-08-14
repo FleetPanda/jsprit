@@ -188,6 +188,20 @@ public class ConstraintManager implements HardActivityConstraint, HardRouteConst
         softRouteConstraintManager.addConstraint(softRouteConstraint);
     }
 
+    /**
+     * Optional application-supplied packing validator (see {@link RoutePackingValidator}).
+     * Null by default: when unset, insertion calculators behave exactly as stock jsprit.
+     */
+    private RoutePackingValidator packingValidator = null;
+
+    public void setPackingValidator(RoutePackingValidator packingValidator) {
+        this.packingValidator = packingValidator;
+    }
+
+    public RoutePackingValidator getPackingValidator() {
+        return packingValidator;
+    }
+
     @Override
     public boolean fulfilled(JobInsertionContext insertionContext) {
         return hardRouteConstraintManager.fulfilled(insertionContext);
