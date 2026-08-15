@@ -355,7 +355,18 @@ public class Shipment extends AbstractJob {
          * Sets maximal time the job can be in vehicle.
          *
         /**
-         * Sets the allowed vehicles for this shipment.
+         * Adds an allowed vehicle for this shipment.
+         *
+         * @param vehicleId the vehicle id to allow
+         * @return builder
+         */
+        public Builder addAllowedVehicle(String vehicleId) {
+            if (vehicleId != null && !vehicleId.isEmpty()) this.allowedVehicles.add(vehicleId);
+            return this;
+        }
+
+        /**
+         * Sets the allowed vehicles for this shipment (replaces any previously added).
          * If set, only these vehicles can handle this shipment.
          *
          * @param vehicleIds array of allowed vehicle IDs
@@ -370,7 +381,7 @@ public class Shipment extends AbstractJob {
         }
 
         /**
-         * Sets the allowed vehicles for this shipment.
+         * Sets the allowed vehicles for this shipment (replaces any previously added).
          *
          * @param vehicleIds collection of allowed vehicle IDs
          * @return builder
@@ -381,7 +392,18 @@ public class Shipment extends AbstractJob {
         }
 
         /**
-         * Sets the disallowed vehicles for this shipment.
+         * Adds a disallowed vehicle for this shipment.
+         *
+         * @param vehicleId the vehicle id to disallow
+         * @return builder
+         */
+        public Builder addDisallowedVehicle(String vehicleId) {
+            if (vehicleId != null && !vehicleId.isEmpty()) this.disallowedVehicles.add(vehicleId);
+            return this;
+        }
+
+        /**
+         * Sets the disallowed vehicles for this shipment (replaces any previously added).
          *
          * @param vehicleIds array of disallowed vehicle IDs
          * @return builder
@@ -395,7 +417,7 @@ public class Shipment extends AbstractJob {
         }
 
         /**
-         * Sets the disallowed vehicles for this shipment.
+         * Sets the disallowed vehicles for this shipment (replaces any previously added).
          *
          * @param vehicleIds collection of disallowed vehicle IDs
          * @return builder

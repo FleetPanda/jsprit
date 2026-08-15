@@ -269,7 +269,18 @@ public class Service extends AbstractJob {
         }
 
         /**
-         * Sets the allowed vehicles for this service.
+         * Adds an allowed vehicle for this service.
+         *
+         * @param vehicleId the vehicle id to allow
+         * @return builder
+         */
+        public Builder<T> addAllowedVehicle(String vehicleId) {
+            if (vehicleId != null && !vehicleId.isEmpty()) this.allowedVehicles.add(vehicleId);
+            return this;
+        }
+
+        /**
+         * Sets the allowed vehicles for this service (replaces any previously added).
          * If set, only these vehicles can handle this service.
          *
          * @param vehicleIds array of allowed vehicle IDs
@@ -284,7 +295,7 @@ public class Service extends AbstractJob {
         }
 
         /**
-         * Sets the allowed vehicles for this service.
+         * Sets the allowed vehicles for this service (replaces any previously added).
          *
          * @param vehicleIds collection of allowed vehicle IDs
          * @return builder
@@ -295,7 +306,18 @@ public class Service extends AbstractJob {
         }
 
         /**
-         * Sets the disallowed vehicles for this service.
+         * Adds a disallowed vehicle for this service.
+         *
+         * @param vehicleId the vehicle id to disallow
+         * @return builder
+         */
+        public Builder<T> addDisallowedVehicle(String vehicleId) {
+            if (vehicleId != null && !vehicleId.isEmpty()) this.disallowedVehicles.add(vehicleId);
+            return this;
+        }
+
+        /**
+         * Sets the disallowed vehicles for this service (replaces any previously added).
          *
          * @param vehicleIds array of disallowed vehicle IDs
          * @return builder
@@ -309,7 +331,7 @@ public class Service extends AbstractJob {
         }
 
         /**
-         * Sets the disallowed vehicles for this service.
+         * Sets the disallowed vehicles for this service (replaces any previously added).
          *
          * @param vehicleIds collection of disallowed vehicle IDs
          * @return builder
