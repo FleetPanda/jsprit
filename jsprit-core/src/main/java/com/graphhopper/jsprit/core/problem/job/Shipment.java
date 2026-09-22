@@ -387,7 +387,12 @@ public class Shipment extends AbstractJob {
          * @return builder
          */
         public Builder setAllowedVehicles(Collection<String> vehicleIds) {
-            this.allowedVehicles = new HashSet<>(vehicleIds);
+            this.allowedVehicles = new HashSet<>();
+            if (vehicleIds != null) {
+                this.allowedVehicles.addAll(vehicleIds.stream()
+                    .filter(id -> id != null && !id.isEmpty())
+                    .collect(Collectors.toSet()));
+            }
             return this;
         }
 
