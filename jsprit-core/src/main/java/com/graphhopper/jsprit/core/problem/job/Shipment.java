@@ -29,7 +29,9 @@ import com.graphhopper.jsprit.core.problem.solution.route.activity.TimeWindowsIm
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 
@@ -88,6 +90,12 @@ public class Shipment extends AbstractJob {
         public Object userData;
 
         public double maxTimeInVehicle = Double.MAX_VALUE;
+
+        private Set<String> allowedVehicles = new HashSet<>();
+
+        private Set<String> disallowedVehicles = new HashSet<>();
+
+        private List<PreferredVehicle> preferredVehicles = new ArrayList<>();
 
         private Activity pickup;
 
@@ -344,10 +352,127 @@ public class Shipment extends AbstractJob {
         }
 
         /**
+         * Adds an allowed vehicle for this shipment.
+         *
+         * @param vehicleId the vehicle id to allow
+         * @return builder
+         */
+        public Builder addAllowedVehicle(String vehicleId) {
+            if (vehicleId != null && !vehicleId.isEmpty()) this.allowedVehicles.add(vehicleId);
+            return this;
+        }
+
+        /**
+         * Sets the allowed vehicles for this shipment (replaces any previously added).
+         * If set, only these vehicles can handle this shipment.
+         *
+         * @param vehicleIds array of allowed vehicle IDs
+         * @return builder
+         */
+        public Builder setAllowedVehicles(String... vehicleIds) {
+            this.allowedVehicles = new HashSet<>();
+            for (String id : vehicleIds) {
+                if (id != null && !id.isEmpty()) this.allowedVehicles.add(id);
+            }
+            return this;
+        }
+
+        /**
+         * Sets the allowed vehicles for this shipment (replaces any previously added).
+         *
+         * @param vehicleIds collection of allowed vehicle IDs
+         * @return builder
+         */
+        public Builder setAllowedVehicles(Collection<String> vehicleIds) {
+            this.allowedVehicles = new HashSet<>();
+            if (vehicleIds != null) {
+                this.allowedVehicles.addAll(vehicleIds.stream()
+                    .filter(id -> id != null && !id.isEmpty())
+                    .collect(Collectors.toSet()));
+            }
+            return this;
+        }
+
+        /**
+         * Adds a disallowed vehicle for this shipment.
+         *
+         * @param vehicleId the vehicle id to disallow
+         * @return builder
+         */
+        public Builder addDisallowedVehicle(String vehicleId) {
+            if (vehicleId != null && !vehicleId.isEmpty()) this.disallowedVehicles.add(vehicleId);
+            return this;
+        }
+
+        /**
+         * Sets the disallowed vehicles for this shipment (replaces any previously added).
+         *
+         * @param vehicleIds array of disallowed vehicle IDs
+         * @return builder
+         */
+        public Builder setDisallowedVehicles(String... vehicleIds) {
+            this.disallowedVehicles = new HashSet<>();
+            for (String id : vehicleIds) {
+                if (id != null && !id.isEmpty()) this.disallowedVehicles.add(id);
+            }
+            return this;
+        }
+
+        /**
+         * Sets the disallowed vehicles for this shipment (replaces any previously added).
+         *
+         * @param vehicleIds collection of disallowed vehicle IDs
+         * @return builder
+         */
+        public Builder setDisallowedVehicles(Collection<String> vehicleIds) {
+            this.disallowedVehicles = new HashSet<>();
+            if (vehicleIds == null) return this;
+            for (String id : vehicleIds) {
+                if (id != null && !id.isEmpty()) this.disallowedVehicles.add(id);
+            }
+            return this;
+        }
+
+        /**
+         * Adds a preferred vehicle for this shipment.
+         *
+         * @param vehicleId the vehicle id
+         * @param priority  priority between 1 (highest) and 10 (lowest)
+         * @return builder
+         */
+        public Builder addPreferredVehicle(String vehicleId, int priority) {
+            this.preferredVehicles.add(new PreferredVehicle(vehicleId, priority));
+            return this;
+        }
+
+        /**
+         * Adds a preferred vehicle with default priority (2).
+         *
+         * @param vehicleId the vehicle id
+         * @return builder
+         */
+        public Builder addPreferredVehicle(String vehicleId) {
+            this.preferredVehicles.add(new PreferredVehicle(vehicleId));
+            return this;
+        }
+
+        /**
+         * Sets the preferred vehicles for this shipment.
+         *
+         * @param preferredVehicles list of preferred vehicles
+         * @return builder
+         */
+        public Builder setPreferredVehicles(List<PreferredVehicle> preferredVehicles) {
+            this.preferredVehicles = new ArrayList<>(preferredVehicles);
+            return this;
+        }
+
+        /**
          * Sets maximal time the job can be in vehicle.
          *
-         * @param maxTimeInVehicle
-         * @return
+         * @param maxTimeInVehicle the maximal time the job can be in a vehicle
+         * @return builder
+         * @throws IllegalArgumentException if maxTimeInVehicle < 0
          */
         public Builder setMaxTimeInVehicle(double maxTimeInVehicle){
             if (maxTimeInVehicle < 0)
@@ -378,6 +503,12 @@ public class Shipment extends AbstractJob {
     private final int priority;
 
     private final double maxTimeInVehicle;
+
+    private final Set<String> allowedVehicles;
+
+    private final Set<String> disallowedVehicles;
+
+    private final List<PreferredVehicle> preferredVehicles;
 
     private List<Activity> activities = new ArrayList<>();
 
@@ -428,7 +559,7 @@ public class Shipment extends AbstractJob {
         if (adjustedSize != null) {
             return adjustedSize;
         }
-        
+
         // Converter Capacity para double[]
         Capacity capacity = getSize();
         double[] sizeArray = new double[capacity.getNuOfDimensions()];
@@ -437,7 +568,7 @@ public class Shipment extends AbstractJob {
         }
         return sizeArray;
     }
-    
+
 
     public void setAdjustedSize(double[] size) {
         this.adjustedSize = size;
@@ -457,6 +588,9 @@ public class Shipment extends AbstractJob {
         this.deliveryTimeWindows = builder.deliveryTimeWindows;
         this.priority = builder.priority;
         this.maxTimeInVehicle = builder.maxTimeInVehicle;
+        this.allowedVehicles = Collections.unmodifiableSet(new HashSet<>(builder.allowedVehicles));
+        this.disallowedVehicles = Collections.unmodifiableSet(new HashSet<>(builder.disallowedVehicles));
+        this.preferredVehicles = Collections.unmodifiableList(new ArrayList<>(builder.preferredVehicles));
         activities.add(builder.pickup);
         activities.add(builder.delivery);
         activities = Collections.unmodifiableList(activities);
@@ -598,6 +732,21 @@ public class Shipment extends AbstractJob {
     @Override
     public double getMaxTimeInVehicle() {
         return maxTimeInVehicle;
+    }
+
+    @Override
+    public Set<String> getAllowedVehicles() {
+        return allowedVehicles;
+    }
+
+    @Override
+    public Set<String> getDisallowedVehicles() {
+        return disallowedVehicles;
+    }
+
+    @Override
+    public List<PreferredVehicle> getPreferredVehicles() {
+        return preferredVehicles;
     }
 
     @Override

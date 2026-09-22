@@ -23,7 +23,9 @@ import com.graphhopper.jsprit.core.problem.HasId;
 import com.graphhopper.jsprit.core.problem.HasIndex;
 import com.graphhopper.jsprit.core.problem.Skills;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Basic interface for all jobs.
@@ -127,6 +129,34 @@ public interface Job extends HasId, HasIndex {
     int getPriority();
 
     double getMaxTimeInVehicle();
+
+    /**
+     * Returns the set of allowed vehicle IDs for this job.
+     * If empty, all vehicles are allowed (subject to other constraints).
+     *
+     * @return set of allowed vehicle IDs, empty means no restriction
+     */
+    default Set<String> getAllowedVehicles() {
+        return Collections.emptySet();
+    }
+
+    /**
+     * Returns the set of disallowed vehicle IDs for this job.
+     *
+     * @return set of disallowed vehicle IDs
+     */
+    default Set<String> getDisallowedVehicles() {
+        return Collections.emptySet();
+    }
+
+    /**
+     * Returns the list of preferred vehicles for this job.
+     *
+     * @return list of preferred vehicles
+     */
+    default List<PreferredVehicle> getPreferredVehicles() {
+        return Collections.emptyList();
+    }
 
     List<Activity> getActivities();
 

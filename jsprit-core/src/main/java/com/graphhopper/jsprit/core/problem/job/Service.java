@@ -29,7 +29,9 @@ import com.graphhopper.jsprit.core.util.Coordinate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Service implementation of a job.
@@ -95,6 +97,12 @@ public class Service extends AbstractJob {
         protected Object userData;
 
 		protected double maxTimeInVehicle = Double.MAX_VALUE;
+
+        protected Set<String> allowedVehicles = new HashSet<>();
+
+        protected Set<String> disallowedVehicles = new HashSet<>();
+
+        protected List<PreferredVehicle> preferredVehicles = new ArrayList<>();
 
         protected Activity activity;
 
@@ -260,6 +268,119 @@ public class Service extends AbstractJob {
             return this;
         }
 
+        /**
+         * Adds an allowed vehicle for this service.
+         *
+         * @param vehicleId the vehicle id to allow
+         * @return builder
+         */
+        public Builder<T> addAllowedVehicle(String vehicleId) {
+            if (vehicleId != null && !vehicleId.isEmpty()) this.allowedVehicles.add(vehicleId);
+            return this;
+        }
+
+        /**
+         * Sets the allowed vehicles for this service (replaces any previously added).
+         * If set, only these vehicles can handle this service.
+         *
+         * @param vehicleIds array of allowed vehicle IDs
+         * @return builder
+         */
+        public Builder<T> setAllowedVehicles(String... vehicleIds) {
+            this.allowedVehicles = new HashSet<>();
+            for (String id : vehicleIds) {
+                if (id != null && !id.isEmpty()) this.allowedVehicles.add(id);
+            }
+            return this;
+        }
+
+        /**
+         * Sets the allowed vehicles for this service (replaces any previously added).
+         *
+         * @param vehicleIds collection of allowed vehicle IDs
+         * @return builder
+         */
+        public Builder<T> setAllowedVehicles(Collection<String> vehicleIds) {
+            this.allowedVehicles = new HashSet<>();
+            for (String id : vehicleIds) {
+                if (id != null && !id.isEmpty()) this.allowedVehicles.add(id);
+            }
+            return this;
+        }
+
+        /**
+         * Adds a disallowed vehicle for this service.
+         *
+         * @param vehicleId the vehicle id to disallow
+         * @return builder
+         */
+        public Builder<T> addDisallowedVehicle(String vehicleId) {
+            if (vehicleId != null && !vehicleId.isEmpty()) this.disallowedVehicles.add(vehicleId);
+            return this;
+        }
+
+        /**
+         * Sets the disallowed vehicles for this service (replaces any previously added).
+         *
+         * @param vehicleIds array of disallowed vehicle IDs
+         * @return builder
+         */
+        public Builder<T> setDisallowedVehicles(String... vehicleIds) {
+            this.disallowedVehicles = new HashSet<>();
+            for (String id : vehicleIds) {
+                if (id != null && !id.isEmpty()) this.disallowedVehicles.add(id);
+            }
+            return this;
+        }
+
+        /**
+         * Sets the disallowed vehicles for this service (replaces any previously added).
+         *
+         * @param vehicleIds collection of disallowed vehicle IDs
+         * @return builder
+         */
+        public Builder<T> setDisallowedVehicles(Collection<String> vehicleIds) {
+            this.disallowedVehicles = new HashSet<>();
+            for (String id : vehicleIds) {
+                if (id != null && !id.isEmpty()) this.disallowedVehicles.add(id);
+            }
+            return this;
+        }
+
+        /**
+         * Adds a preferred vehicle for this service.
+         *
+         * @param vehicleId the vehicle id
+         * @param priority  priority between 1 (highest) and 10 (lowest)
+         * @return builder
+         */
+        public Builder<T> addPreferredVehicle(String vehicleId, int priority) {
+            this.preferredVehicles.add(new PreferredVehicle(vehicleId, priority));
+            return this;
+        }
+
+        /**
+         * Adds a preferred vehicle with default priority (2).
+         *
+         * @param vehicleId the vehicle id
+         * @return builder
+         */
+        public Builder<T> addPreferredVehicle(String vehicleId) {
+            this.preferredVehicles.add(new PreferredVehicle(vehicleId));
+            return this;
+        }
+
+        /**
+         * Sets the preferred vehicles for this service.
+         *
+         * @param preferredVehicles list of preferred vehicles
+         * @return builder
+         */
+        public Builder<T> setPreferredVehicles(List<PreferredVehicle> preferredVehicles) {
+            this.preferredVehicles = new ArrayList<>(preferredVehicles);
+            return this;
+        }
+
         public Builder<T> setMaxTimeInVehicle(double maxTimeInVehicle){
             throw new UnsupportedOperationException("The maximum time in vehicle is not yet supported for Pickups and Services (only for Deliveries and Shipments).");
 //            if(maxTimeInVehicle < 0) throw new IllegalArgumentException("maxTimeInVehicle should be positive");
@@ -288,6 +409,12 @@ public class Service extends AbstractJob {
 
     private final double maxTimeInVehicle;
 
+    private final Set<String> allowedVehicles;
+
+    private final Set<String> disallowedVehicles;
+
+    private final List<PreferredVehicle> preferredVehicles;
+
     private List<Activity> activities = new ArrayList<>();
 
     Service(Builder<?> builder) {
@@ -302,6 +429,9 @@ public class Service extends AbstractJob {
         timeWindows = builder.timeWindows;
         priority = builder.priority;
 	    maxTimeInVehicle = builder.maxTimeInVehicle;
+        allowedVehicles = Collections.unmodifiableSet(new HashSet<>(builder.allowedVehicles));
+        disallowedVehicles = Collections.unmodifiableSet(new HashSet<>(builder.disallowedVehicles));
+        preferredVehicles = Collections.unmodifiableList(new ArrayList<>(builder.preferredVehicles));
         activities.add(builder.activity);
         activities = Collections.unmodifiableList(activities);
 	}
@@ -427,6 +557,21 @@ public class Service extends AbstractJob {
     @Override
     public double getMaxTimeInVehicle() {
         return this.maxTimeInVehicle;
+    }
+
+    @Override
+    public Set<String> getAllowedVehicles() {
+        return allowedVehicles;
+    }
+
+    @Override
+    public Set<String> getDisallowedVehicles() {
+        return disallowedVehicles;
+    }
+
+    @Override
+    public List<PreferredVehicle> getPreferredVehicles() {
+        return preferredVehicles;
     }
 
     @Override

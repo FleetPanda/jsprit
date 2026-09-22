@@ -46,6 +46,7 @@ public class AlgorithmUtil {
         constraintManager.addTimeWindowConstraint();
         constraintManager.addLoadConstraint();
         constraintManager.addSkillsConstraint();
+        constraintManager.addVehicleRestrictionConstraints();
         constraintManager.addConstraint(new SwitchNotFeasible(stateManager));
         stateManager.updateLoadStates();
         stateManager.updateTimeWindowStates();
