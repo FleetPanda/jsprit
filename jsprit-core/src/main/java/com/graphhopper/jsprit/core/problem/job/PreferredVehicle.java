@@ -22,6 +22,10 @@ package com.graphhopper.jsprit.core.problem.job;
  * <p>
  * Priority is a number between 1 and 10 where 1 indicates the highest priority
  * and 10 the lowest. Default priority is 2.
+ * <p>
+ * Equality and hash code are based only on {@code vehicleId}. This means two
+ * {@code PreferredVehicle} instances with the same vehicle id are considered
+ * equal even if they have different priority values.
  */
 public class PreferredVehicle {
 

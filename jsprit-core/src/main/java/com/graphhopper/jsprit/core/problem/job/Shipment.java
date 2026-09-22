@@ -352,9 +352,6 @@ public class Shipment extends AbstractJob {
         }
 
         /**
-         * Sets maximal time the job can be in vehicle.
-         *
-        /**
          * Adds an allowed vehicle for this shipment.
          *
          * @param vehicleId the vehicle id to allow
@@ -471,8 +468,11 @@ public class Shipment extends AbstractJob {
         }
 
         /**
-         * @param maxTimeInVehicle
-         * @return
+         * Sets maximal time the job can be in vehicle.
+         *
+         * @param maxTimeInVehicle the maximal time the job can be in a vehicle
+         * @return builder
+         * @throws IllegalArgumentException if maxTimeInVehicle < 0
          */
         public Builder setMaxTimeInVehicle(double maxTimeInVehicle){
             if (maxTimeInVehicle < 0)
@@ -559,7 +559,7 @@ public class Shipment extends AbstractJob {
         if (adjustedSize != null) {
             return adjustedSize;
         }
-        
+
         // Converter Capacity para double[]
         Capacity capacity = getSize();
         double[] sizeArray = new double[capacity.getNuOfDimensions()];
@@ -568,7 +568,7 @@ public class Shipment extends AbstractJob {
         }
         return sizeArray;
     }
-    
+
 
     public void setAdjustedSize(double[] size) {
         this.adjustedSize = size;

@@ -54,8 +54,6 @@ class HardVehicleRestrictionConstraintTest {
         vehicleDriverA = VehicleImpl.Builder.newInstance("driver-A")
             .setStartLocation(Location.newInstance("start")).setType(type).build();
 
-        VehicleRoutingProblem vrp = VehicleRoutingProblem.Builder.newInstance()
-            .addVehicle(vehiclePeter).addVehicle(vehicleStefan).addVehicle(vehicleDriverA).build();
         emptyRoute = VehicleRoute.emptyRoute();
     }
 
