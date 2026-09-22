@@ -301,7 +301,10 @@ public class Service extends AbstractJob {
          * @return builder
          */
         public Builder<T> setAllowedVehicles(Collection<String> vehicleIds) {
-            this.allowedVehicles = new HashSet<>(vehicleIds);
+            this.allowedVehicles = new HashSet<>();
+            for (String id : vehicleIds) {
+                if (id != null && !id.isEmpty()) this.allowedVehicles.add(id);
+            }
             return this;
         }
 
